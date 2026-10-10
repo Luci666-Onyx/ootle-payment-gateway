@@ -1,0 +1,12 @@
+# Build artifacts
+*.zip
+
+# WordPress / editor cruft
+.DS_Store
+*.log
+node_modules/
+
+# Local test / scratch
+test-*.php
+verify-*.php
+*_scratch/
