@@ -20,6 +20,8 @@ define('OOTLE_API_BASE_URL', 'https://api.ootle.com/v1');
 
 require_once __DIR__ . '/includes/class-ootle-order-meta.php';
 require_once __DIR__ . '/includes/class-ootle-webhook-handler.php';
+require_once __DIR__ . '/includes/class-ootle-rpc-client.php';
+require_once __DIR__ . '/includes/class-ootle-stealth-checkout.php';
 
 add_action('plugins_loaded', 'register_ootle_gateway');
 add_action('wp_enqueue_scripts', 'ootle_gateway_enqueue_scripts');
