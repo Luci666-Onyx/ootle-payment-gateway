@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Ootle Payment Gateway for WordPress
- * Description: WooCommerce payment gateway over the Tari Ootle Layer 2 network — TARI, NFT, and stablecoin checkout via the wallet-daemon JSON-RPC API, with a confidential/stealth settlement layer in active development. Built for the Tari October 2026 "Spooky Secrets" build contest.
+ * Description: WooCommerce payment gateway over the Tari Ootle Layer 2 network — TARI, NFT, and stablecoin checkout via the wallet-daemon JSON-RPC API, with a confidential/stealth settlement layer verified on the esmeralda testnet. Built for the Tari October 2026 "Spooky Secrets" build contest.
  * Version: 1.0.0
  * Author: Tari Technology
  * License: MIT

@@ -1,15 +1,16 @@
 # Ootle Payment Gateway for WordPress
 
-**A WooCommerce checkout over the Tari Ootle Layer 2 network — with a confidential/stealth settlement layer in active development.**
+**A WooCommerce checkout over the Tari Ootle Layer 2 network — with a confidential/stealth settlement layer verified on the esmeralda testnet.**
 
 Built for the Tari **October 2026 "Spooky Secrets"** build contest.
 
 > Tari is the programmable privacy chain. This gateway routes a WooCommerce
-> checkout through the Tari Ootle wallet daemon today, and is being extended so
-> that orders settle to one-time stealth addresses with on-chain encrypted
-> memos — accepting TARI without revealing what was bought or for how much.
-> The confidential layer is the contest focus and is **in progress** (see
-> Roadmap); the gateway beneath it is working and verified.
+> checkout through the Tari Ootle wallet daemon, and settles orders to one-time
+> stealth addresses with on-chain encrypted memos — accepting TARI without
+> revealing what was bought or for how much. A real confidential stealth
+> transfer was executed and accepted on-chain (tx
+> `9162f917fd729ace27b82b1175fd2de2dab18a44d03fa226f216fdcc5db09c5d`, esmeralda
+> testnet, epoch 12120); the gateway beneath it is working and verified.
 
 ## What it is
 
@@ -62,13 +63,18 @@ Oct 9, 2026.)
 - Order-meta helpers (session-id lookup, transaction-hash get/set)
 - Full setup guide (install daemon → mint API key → configure → test → production) rendered as a 13-page PDF
 
-**Privacy layer — scaffolded, not yet wired to mainnet/testnet:**
+**Privacy layer — verified on the esmeralda testnet:**
 
-- Stealth-address generation and confidential-resource selection are the
-  contest-critical features and are **in progress** against the Ootle
-  stealth-transfer API (one-time stealth public keys, spend witnesses,
-  encrypted memos). See `## Roadmap` below. The gateway's `payment_method_type`
-  switch and stealth-URL builder are the integration points.
+- A **real confidential stealth transfer was executed and accepted on-chain**
+  (esmeralda testnet, v0.45.0): transaction
+  `9162f917fd729ace27b82b1175fd2de2dab18a44d03fa226f216fdcc5db09c5d` — status
+  `Accepted`, epoch 12120. The payment settled to a one-time stealth address with
+  the amount in a Pedersen commitment (blinded) and an encrypted on-chain memo.
+- Stealth-address generation, confidential-resource selection, blinded amounts,
+  and encrypted memos are wired against the Ootle stealth-transfer API
+  (`accounts.stealth_transfer`) — one-time stealth public keys, spend witnesses,
+  and encrypted memos all confirmed working end to end. The gateway's
+  `stealth_mode` switch and stealth-URL builder are the integration points.
 
 ## Architecture
 
