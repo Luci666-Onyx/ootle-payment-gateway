@@ -72,6 +72,59 @@ class Ootle_Stealth_Checkout
     }
 
     /**
+     * The address a customer sends XTR to. Uses the merchant's configured
+     * Ootle address (otl_esm_...); falls back to the public key if it is
+     * already an Ootle address.
+     *
+     * @return string
+     * @throws Exception If no usable address is configured.
+     */
+    public function get_receive_address(): string
+    {
+        $addr = trim($this->merchant_address);
+        if ($addr === '') {
+            // Fall back to the public key only if it looks like an Ootle address.
+            if (str_starts_with($this->merchant_public_key, 'otl_')) {
+                $addr = $this->merchant_public_key;
+            } else {
+                throw new Exception('Stealth mode requires the Merchant Ootle Address (otl_esm_...) — set it in the gateway settings.');
+            }
+        }
+        return $addr;
+    }
+
+    /**
+     * The resource address customers pay in (the native XTR/TARI token).
+     *
+     * @return string
+     */
+    public function get_resource_address(): string
+    {
+        return $this->resource_address;
+    }
+
+    /**
+     * Convert an order total (USD) to the XTR amount the customer should send,
+     * using the live XTR/USD rate. Returns a human-readable decimal string.
+     *
+     * @param WC_Order $order
+     * @return string XTR amount (decimal), e.g. "674404.33".
+     */
+    public function order_amount_xtr($order): string
+    {
+        $usd = (float) $order->get_total();
+        $rate = 0.0;
+        if (function_exists('ootle_get_xtm_usd_rate')) {
+            $rate = (float) ootle_get_xtm_usd_rate();
+        }
+        if ($rate <= 0) {
+            $rate = 0.00148; // last-resort fallback
+        }
+        $xtr = $usd / $rate;
+        return number_format($xtr, 2, '.', '');
+    }
+
+    /**
      * Pay an order via a stealth transfer to the merchant's one-time address.
      *
      * The order reference travels as an encrypted memo, so the on-chain record

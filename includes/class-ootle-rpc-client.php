@@ -37,6 +37,9 @@ class Ootle_Rpc_Client
     /** @var int Monotonic JSON-RPC request id. */
     private int $rpc_id = 0;
 
+    /** @var string|null Cached session token from auth.request. */
+    private ?string $session_token = null;
+
     /**
      * @param string $base_url Daemon base URL (no trailing slash).
      * @param string $api_key  Bearer API key.
@@ -138,6 +141,27 @@ class Ootle_Rpc_Client
             'account' => $account,
             'utxo_id' => $utxo_id,
             'view_key' => $view_key,
+        ]);
+    }
+
+    /**
+     * Get the current balances for an account. Returns confidential and
+     * revealed balances per resource. This is the merchant-side reconciliation
+     * call: by comparing the confidential balance before and after a customer
+     * pays, the store detects the incoming payment without needing to correlate
+     * individual stealth outputs (which is the whole point of confidential
+     * transfers — on-chain amounts are hidden).
+     *
+     * @param string $account Account name or component address.
+     * @return array Decoded JSON-RPC `result`: { address, balances: [ { balance,
+     *               confidential_balance, divisibility, resource_address,
+     *               resource_type, token_symbol, vault_address }, ... ] }
+     * @throws Exception On transport or RPC error.
+     */
+    public function accounts_get_balances(string $account): array
+    {
+        return $this->call('accounts.get_balances', [
+            'account' => $account,
         ]);
     }
 
@@ -256,6 +280,10 @@ class Ootle_Rpc_Client
     {
         $url = $this->base_url . '/json_rpc';
 
+        // Obtain (and cache) a session token. A static api_key, if configured,
+        // is used as a fallback bearer; otherwise we mint one via auth.request.
+        $token = $this->get_session_token($url);
+
         $envelope = [
             'jsonrpc' => '2.0',
             'method' => $method,
@@ -267,7 +295,7 @@ class Ootle_Rpc_Client
             'method' => 'POST',
             'headers' => [
                 'Content-Type' => 'application/json',
-                'Authorization' => 'Bearer ' . $this->api_key,
+                'Authorization' => 'Bearer ' . $token,
             ],
             'timeout' => 30,
             'sslverify' => !$this->insecure,
@@ -302,5 +330,54 @@ class Ootle_Rpc_Client
         }
 
         return $decoded['result'] ?? [];
+    }
+
+    /**
+     * Return a bearer token for daemon calls. Uses the configured api_key if
+     * present; otherwise mints a session token via auth.request (no credentials,
+     * suitable for a local/dev daemon) and caches it on the instance.
+     *
+     * @param string $url Full /json_rpc endpoint.
+     * @return string
+     * @throws Exception If auth fails.
+     */
+    private function get_session_token(string $url): string
+    {
+        if ($this->api_key !== '') {
+            return $this->api_key;
+        }
+        if ($this->session_token !== null) {
+            return $this->session_token;
+        }
+
+        $envelope = [
+            'jsonrpc' => '2.0',
+            'method' => 'auth.request',
+            'params' => [
+                'permissions' => ['Admin'],
+                'credentials' => ['None' => null],
+            ],
+            'id' => ++$this->rpc_id,
+        ];
+        $args = [
+            'method' => 'POST',
+            'headers' => ['Content-Type' => 'application/json'],
+            'timeout' => 15,
+            'sslverify' => !$this->insecure,
+            'body' => wp_json_encode($envelope),
+        ];
+        $response = wp_remote_request($url, $args);
+        if (is_wp_error($response)) {
+            throw new Exception('Ootle auth failed: ' . $response->get_error_message());
+        }
+        $decoded = json_decode(wp_remote_retrieve_body($response), true);
+        if (!is_array($decoded) || !isset($decoded['result']['token'])) {
+            $msg = is_array($decoded) && isset($decoded['error']['message'])
+                ? $decoded['error']['message']
+                : 'no token in auth response';
+            throw new Exception('Ootle auth failed: ' . $msg);
+        }
+        $this->session_token = (string) $decoded['result']['token'];
+        return $this->session_token;
     }
 }

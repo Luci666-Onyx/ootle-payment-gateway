@@ -36,6 +36,41 @@ class Ootle_WC_Gateway extends WC_Payment_Gateway
 
         add_action('woocommerce_update_options_payment_gateways_' . $this->id, [$this, 'process_admin_options']);
         add_action('woocommerce_api_ootle_webhook', [$this, 'handle_webhook']);
+
+        // Manual "Mark as paid" fallback on the order admin screen.
+        add_action('woocommerce_order_actions', [$this, 'add_mark_paid_action']);
+        add_action('woocommerce_order_action_ootle_mark_paid', [$this, 'process_mark_paid_action']);
+    }
+
+    /**
+     * Add a "Mark as paid (Ootle)" action to the order admin dropdown for
+     * on-hold Ootle orders. Fallback override when auto-reconciliation is
+     * unavailable or the merchant confirms payment out-of-band.
+     *
+     * @param array $actions Existing order actions.
+     * @return array
+     */
+    public function add_mark_paid_action($actions)
+    {
+        global $theorder;
+        if ( $theorder && $theorder->get_payment_method() === $this->id && $theorder->get_status() === 'on-hold' ) {
+            $actions['ootle_mark_paid'] = __('Mark as paid (Ootle — manual confirm)', 'ootle-gateway');
+        }
+        return $actions;
+    }
+
+    /**
+     * Process the manual mark-as-paid action: complete the order.
+     *
+     * @param WC_Order $order
+     */
+    public function process_mark_paid_action($order)
+    {
+        if ( $order->get_payment_method() !== $this->id ) {
+            return;
+        }
+        $order->update_status('completed', 'Payment confirmed manually by store admin (Ootle).');
+        $order->save();
     }
 
     public function init_form_fields()
@@ -212,24 +247,68 @@ class Ootle_WC_Gateway extends WC_Payment_Gateway
     }
 
     /**
-     * Settle an order via a stealth transfer. The order goes to pending until
-     * the on-chain transaction confirms (via webhook or manual reconciliation).
+     * Extract the confidential balance (in micro-units) for a specific resource
+     * from an accounts.get_balances response. Returns 0 if not found.
      *
-     * @param WC_Order $order
-     * @return array WooCommerce process_payment result.
-     * @throws Exception
+     * @param array  $balances_result Decoded accounts.get_balances result.
+     * @param string $resource        Resource address to match.
+     * @return int Confidential balance in micro-units.
      */
+    private function extract_confidential_balance(array $balances_result, string $resource): int
+    {
+        $balances = $balances_result['balances'] ?? [];
+        foreach ($balances as $b) {
+            if (($b['resource_address'] ?? '') === $resource) {
+                return (int) ($b['confidential_balance'] ?? 0);
+            }
+        }
+        return 0;
+    }
+
     private function process_stealth_payment($order): array
     {
+        // Customer-payment model: the customer sends XTR from their own wallet
+        // to the merchant's Ootle address. We do NOT move funds from the
+        // merchant account (that would be a self-transfer, not a real payment).
+        // We store the receive address + expected amount, put the order
+        // on-hold, and show the address + QR on the order-received page.
         $checkout = $this->build_stealth_checkout();
-        $receipt = $checkout->pay_order($order);
+        $receive = $checkout->get_receive_address();
+        $amount_xtr = $checkout->order_amount_xtr($order);
+        $resource = $checkout->get_resource_address();
 
-        $order->update_status('pending', 'Awaiting on-chain confirmation of stealth payment ' . $receipt['transaction_hash']);
+        // Snapshot the merchant account's confidential balance BEFORE the
+        // customer pays. The reconciler later compares against this to detect
+        // the incoming payment (confidential amounts can't be matched per-tx,
+        // so we detect the balance increase >= expected).
+        $balance_before = 0;
+        try {
+            $rpc = new Ootle_Rpc_Client($this->api_base_url, (string) $this->api_key, $this->test_mode);
+            $bal = $rpc->accounts_get_balances(trim((string) $this->get_option('merchant_account')));
+            $balance_before = $this->extract_confidential_balance($bal, $resource);
+        } catch (Exception $e) {
+            // Non-fatal: reconciliation can still work via manual confirm.
+            $order->add_order_note('Could not snapshot balance before payment: ' . $e->getMessage());
+        }
 
-        // No customer redirect: the merchant's wallet daemon submits the
-        // transaction. The customer lands on the order-received page.
+        // Use the order's meta API (HPOS-safe), not update_post_meta().
+        $order->update_meta_data('_ootle_receive_address', $receive);
+        $order->update_meta_data('_ootle_expected_xtr', $amount_xtr);
+        $order->update_meta_data('_ootle_payment_resource', $resource);
+        $order->update_meta_data('_ootle_balance_before', (string) $balance_before);
+        $order->save();
+
+        $order->update_status(
+            'on-hold',
+            sprintf(
+                'Awaiting customer payment: send %s XTR to %s',
+                $amount_xtr,
+                $receive
+            )
+        );
+
         return [
-            'result' => 'success',
+            'result'   => 'success',
             'redirect' => $this->get_return_url($order),
         ];
     }
