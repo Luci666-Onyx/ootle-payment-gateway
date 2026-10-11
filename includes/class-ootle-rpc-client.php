@@ -166,33 +166,58 @@ class Ootle_Rpc_Client
     {
         $micro = self::to_micro_units($args['amount']);
 
-        // blinded_amount is the confidential (Pedersen-committed) portion;
-        // revealed_amount is the public portion. A fully private payment puts
-        // everything in blinded_amount and zero in revealed_amount.
+        // Fully confidential by default: the whole amount is blinded
+        // (Pedersen-committed); revealed_amount stays zero.
         $revealed = !empty($args['reveal_amount']) ? $micro : 0;
-        $blinded = !empty($args['reveal_amount']) ? 0 : $micro;
+        $blinded  = !empty($args['reveal_amount']) ? 0 : $micro;
 
-        $output = [
-            'destination' => $args['destination'],
-            'blinded_amount' => $blinded,
-            'revealed_amount' => $revealed,
+        // The daemon's accounts.stealth_transfer expects a `transfers` array
+        // (NOT `outputs`), each with a destination_address, the blinded/revealed
+        // split, and an output_memo that is a TAGGED ENUM ({"Message": "..."}),
+        // not a bare string. pay_to "StealthPublicKey" derives the one-time
+        // stealth address from the destination public key.
+        $transfer = [
+            'destination_address'    => $args['destination'],
+            'blinded_output_amount'  => $blinded,
+            'revealed_output_amount' => $revealed,
+            'output_memo'            => !empty($args['memo']) ? ['Message' => (string) $args['memo']] : null,
+            'pay_to'                 => 'StealthPublicKey',
+            'attach_sender_address'  => false,
+            'pay_ref'                => null,
         ];
-        if (!empty($args['memo'])) {
-            $output['memo'] = $args['memo'];
+
+        // max_epoch is MANDATORY (every tx carries a bounded validity window).
+        // Default to a generous window when the caller does not set one.
+        $max_epoch = (int) ($args['max_epoch'] ?? 0);
+        if ($max_epoch <= 0) {
+            $max_epoch = 12120 + 1000; // current epoch headroom (esmeralda ~12120)
+        }
+
+        // The daemon's account args are TAGGED ENUMS, not bare strings:
+        // {"ComponentAddress":"component_..."} or {"Name":"..."}. A bare
+        // component_ string is rejected with "unknown variant".
+        $account = $args['account'];
+        if (str_starts_with($account, 'component_')) {
+            $account_arg = ['ComponentAddress' => $account];
+        } else {
+            $account_arg = ['Name' => $account];
         }
 
         $params = [
-            'account' => $args['account'],
+            'account'         => $account_arg,
+            'owner_account'   => $account_arg,
             'resource_address' => $args['resource_address'],
-            'outputs' => [$output],
-            'max_fee' => (int) ($args['max_fee'] ?? 1000),
-            'max_epoch' => (int) ($args['max_epoch'] ?? 0),
+            'input_selection' => 'PreferRevealed',
+            'transfers'       => [$transfer],
+            'badge_usage'     => 'None',
+            'max_fee'         => (int) ($args['max_fee'] ?? 100000),
+            'max_epoch'       => $max_epoch,
+            'dry_run'         => false,
+            'fee_params'      => [
+                'input_selection'   => 'PreferRevealed',
+                'pay_fee_with_swap' => null,
+            ],
         ];
-
-        // A zero max_epoch means "no explicit cap"; the daemon picks the window.
-        if ($params['max_epoch'] === 0) {
-            unset($params['max_epoch']);
-        }
 
         return $params;
     }

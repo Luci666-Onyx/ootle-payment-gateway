@@ -38,6 +38,9 @@ class Ootle_Stealth_Checkout
     /** @var string Merchant destination public key (stealth addresses derive from it). */
     private string $merchant_public_key;
 
+    /** @var string Merchant Ootle address (otl_esm_...) — the destination_address the daemon requires. */
+    private string $merchant_address;
+
     /** @var string Resource address to transfer — the native TARI token by default. */
     private string $resource_address;
 
@@ -62,6 +65,7 @@ class Ootle_Stealth_Checkout
         $this->rpc = $config['rpc'];
         $this->merchant_account = $config['merchant_account'];
         $this->merchant_public_key = $config['merchant_public_key'];
+        $this->merchant_address = $config['merchant_address'] ?? '';
         $this->resource_address = $config['resource_address'];
         $this->resource_view_key = $config['resource_view_key'] ?? '';
         $this->max_fee = (int) ($config['max_fee'] ?? 1000);
@@ -88,9 +92,18 @@ class Ootle_Stealth_Checkout
         // daemon; here we pass a stable reference the daemon memo-encrypts.
         $memo = 'wc-order:' . $order_id;
 
+        // The daemon requires the destination_address to be a Bech32 Ootle
+        // address (otl_esm_...), not a raw public key. Prefer the configured
+        // merchant address; fall back to the public key only if it looks like
+        // an Ootle address already.
+        $destination = $this->merchant_address;
+        if ($destination === '') {
+            throw new Exception('Stealth mode requires the Merchant Ootle Address (otl_esm_...) — set it in the gateway settings.');
+        }
+
         $params = Ootle_Rpc_Client::build_stealth_transfer_params([
             'account' => $this->merchant_account,
-            'destination' => $this->merchant_public_key,
+            'destination' => $destination,
             'resource_address' => $this->resource_address,
             'amount' => (string) $order->get_total(),
             'max_fee' => $this->max_fee,
@@ -101,8 +114,12 @@ class Ootle_Stealth_Checkout
 
         $result = $this->rpc->accounts_stealth_transfer($params);
 
-        $tx_hash = $result['transaction_hash']
+        // The daemon returns the on-chain reference as `transaction_id` (not
+        // `transaction_hash`). Accept any of the known key shapes.
+        $tx_hash = $result['transaction_id']
+            ?? $result['transaction_hash']
             ?? $result['finalize']['transaction_hash']
+            ?? $result['finalize']['transaction_id']
             ?? '';
 
         if ($tx_hash === '') {

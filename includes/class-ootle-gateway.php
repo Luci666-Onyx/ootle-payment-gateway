@@ -112,6 +112,13 @@ class Ootle_WC_Gateway extends WC_Payment_Gateway
                 'default' => '',
                 'desc_tip' => true,
             ],
+            'merchant_address' => [
+                'title' => __('Merchant Ootle Address', 'ootle-gateway'),
+                'type' => 'text',
+                'description' => __('The account\'s otl_esm_... address (from accounts.create/list). This is the destination_address the daemon requires for a stealth transfer — it must be the Bech32 Ootle address, not the raw public key.', 'ootle-gateway'),
+                'default' => '',
+                'desc_tip' => true,
+            ],
             'resource_address' => [
                 'title' => __('Resource Address', 'ootle-gateway'),
                 'type' => 'text',
@@ -197,6 +204,7 @@ class Ootle_WC_Gateway extends WC_Payment_Gateway
             'rpc' => $rpc,
             'merchant_account' => $account,
             'merchant_public_key' => $pubkey,
+            'merchant_address' => trim((string) $this->get_option('merchant_address')),
             'resource_address' => $resource,
             'resource_view_key' => trim((string) $this->get_option('resource_view_key')),
             'max_fee' => (int) $this->get_option('max_fee') ?: 1000,
