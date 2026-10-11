@@ -326,10 +326,17 @@ function ootle_payment_complete_shortcode() {
       <?php if ( ! empty( $downloads ) ) : ?>
         <h3 style="color:#7ee787;font-size:15px;margin:0 0 10px;">Your download<?php echo count( $downloads ) > 1 ? 's' : ''; ?></h3>
         <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:10px;">
-          <?php foreach ( $downloads as $download ) : ?>
-            <li style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;background:#052e16;border:1px solid #14532d;border-radius:8px;">
-              <span style="color:#e6edf3;font-size:14px;"><?php echo esc_html( $download['product_name'] ); ?></span>
-              <a href="<?php echo esc_url( $download['download_url'] ); ?>" class="button"
+          <?php foreach ( $downloads as $download ) :
+            $rem = $download['downloads_remaining'];
+            $rem_label = ( '' === $rem || null === $rem ) ? 'Unlimited downloads' : sprintf( '%s download%s remaining', $rem, $rem == 1 ? '' : 's' );
+            ?>
+            <li class="ootle-dl-item" data-remaining="<?php echo esc_attr( (string) $rem ); ?>"
+                style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;background:#052e16;border:1px solid #14532d;border-radius:8px;">
+              <span style="color:#e6edf3;font-size:14px;">
+                <?php echo esc_html( $download['product_name'] ); ?>
+                <span class="ootle-dl-remaining" style="display:block;color:#86efac;font-size:12px;margin-top:2px;"><?php echo esc_html( $rem_label ); ?></span>
+              </span>
+              <a href="<?php echo esc_url( $download['download_url'] ); ?>" class="button ootle-dl-btn"
                  style="background:#3fb950;color:#052e16;border:none;border-radius:6px;padding:8px 14px;font-weight:700;font-size:13px;text-decoration:none;white-space:nowrap;">Download</a>
             </li>
           <?php endforeach; ?>
@@ -338,6 +345,56 @@ function ootle_payment_complete_shortcode() {
         <p style="color:#a7f3d0;font-size:14px;">You can review your order anytime in <strong>My Account → Orders</strong>.</p>
       <?php endif; ?>
     </div>
+    <script>
+    (function () {
+        // Live download counter: when a Download button is clicked, the server
+        // decrements the count as it serves the file. We optimistically tick it
+        // down immediately, then confirm with a quick poll so the number stays
+        // accurate even if the user downloads more than once.
+        var ajaxUrl = <?php echo wp_json_encode( admin_url( 'admin-ajax.php' ) ); ?>;
+        var nonce = <?php echo wp_json_encode( wp_create_nonce( 'ootle_dl_count_' . $order_id ) ); ?>;
+        var orderId = <?php echo (int) $order_id; ?>;
+
+        function label(rem) {
+            if (rem === '' || rem === null) return 'Unlimited downloads';
+            return rem + ' download' + (rem == 1 ? '' : 's') + ' remaining';
+        }
+
+        function refresh(li) {
+            var body = new URLSearchParams({ action: 'ootle_download_count', nonce: nonce, order_id: orderId });
+            fetch(ajaxUrl, { method: 'POST', body: body, credentials: 'same-origin' })
+                .then(function (r) { return r.json(); })
+                .then(function (d) {
+                    if (d && d.success && d.data && typeof d.data.remaining !== 'undefined') {
+                        li.setAttribute('data-remaining', d.data.remaining);
+                        var el = li.querySelector('.ootle-dl-remaining');
+                        if (el) el.textContent = label(d.data.remaining);
+                    }
+                }).catch(function () {});
+        }
+
+        document.querySelectorAll('.ootle-dl-item').forEach(function (li) {
+            var btn = li.querySelector('.ootle-dl-btn');
+            if (!btn) return;
+            btn.addEventListener('click', function () {
+                // Optimistic decrement for instant feedback.
+                var rem = li.getAttribute('data-remaining');
+                if (rem !== '' && rem !== null) {
+                    var n = parseInt(rem, 10);
+                    if (!isNaN(n) && n > 0) {
+                        var next = n - 1;
+                        li.setAttribute('data-remaining', next);
+                        var el = li.querySelector('.ootle-dl-remaining');
+                        if (el) el.textContent = label(next);
+                    }
+                }
+                // Confirm against the server shortly after (the file request
+                // decrements server-side; give it a moment to land).
+                setTimeout(function () { refresh(li); }, 1500);
+            });
+        });
+    })();
+    </script>
     <?php
     return ob_get_clean();
 }
@@ -354,3 +411,27 @@ function ootle_pc_card( $title, $body, $color, $bg ) {
         esc_attr( $color ), esc_attr( $bg ), esc_html( $title ), esc_html( $body )
     );
 }
+
+/**
+ * AJAX: return the current downloads-remaining for an Ootle order's first
+ * download. Used by the Thank You page to keep the counter accurate after a
+ * download is served (the server decrements as it streams the file).
+ */
+function ootle_ajax_download_count() {
+    $order_id = isset( $_POST['order_id'] ) ? absint( $_POST['order_id'] ) : 0;
+    if ( ! $order_id || ! check_ajax_referer( 'ootle_dl_count_' . $order_id, 'nonce', false ) ) {
+        wp_send_json_error( [ 'message' => 'bad request' ], 400 );
+    }
+    $order = wc_get_order( $order_id );
+    if ( ! $order || $order->get_payment_method() !== 'ootle' ) {
+        wp_send_json_error( [ 'message' => 'not found' ], 404 );
+    }
+    $items = $order->get_downloadable_items();
+    if ( empty( $items ) ) {
+        wp_send_json_success( [ 'remaining' => '' ] );
+    }
+    $rem = $items[0]['downloads_remaining'] ?? '';
+    wp_send_json_success( [ 'remaining' => (string) $rem ] );
+}
+add_action( 'wp_ajax_ootle_download_count', 'ootle_ajax_download_count' );
+add_action( 'wp_ajax_nopriv_ootle_download_count', 'ootle_ajax_download_count' );
