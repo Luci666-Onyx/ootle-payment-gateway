@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ootle Payment Gateway — Complete Setup Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0e17;
+  --surface: #111827;
+  --surface2: #1a2332;
+  --border: #1f2a3f;
+  --text: #c8cdd8;
+  --text-bright: #e8ecf4;
+  --accent: #3b82f6;
+  --accent2: #f97316;
+  --accent3: #10b981;
+  --accent4: #8b5cf6;
+  --warn: #ef4444;
+  --muted: #6b7280;
+  --cyan: #22d3ee;
+  --emerald: #34d399;
+  --violet: #a78bfa;
+  --amber: #fbbf24;
+  --rose: #fb7185;
+  --slate: #94a3b8;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--bg); color: var(--text);
+  font-size: 14px; line-height: 1.7;
+}
+.page { max-width: 960px; margin: 0 auto; padding: 40px 32px; }
+
+/* ---------- Cover ---------- */
+.cover {
+  text-align: left; padding: 72px 0 56px; border-bottom: 1px solid var(--border);
+  margin-bottom: 40px;
+}
+.cover .kicker {
+  font-size: 12px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.12em; color: var(--accent); margin-bottom: 14px;
+}
+.cover h1 {
+  font-size: 42px; font-weight: 800; color: var(--text-bright);
+  letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 18px;
+}
+.cover .sub { font-size: 16px; color: var(--muted); max-width: 720px; }
+.cover .meta-row { display: flex; gap: 10px; margin-top: 26px; flex-wrap: wrap; }
+.cover .pill {
+  padding: 6px 13px; border-radius: 6px; font-size: 12px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.05em;
+  background: rgba(59,130,246,0.12); color: var(--accent);
+  border: 1px solid rgba(59,130,246,0.25);
+}
+.cover .pill.violet { background: rgba(139,92,246,0.12); color: var(--accent4); border-color: rgba(139,92,246,0.25); }
+.cover .pill.muted { background: rgba(75,85,99,0.15); color: var(--muted); border-color: rgba(75,85,99,0.25); }
+.cover .pill.cyan { background: rgba(34,211,238,0.1); color: var(--cyan); border-color: rgba(34,211,238,0.25); }
+
+/* ---------- Headings ---------- */
+h2.section {
+  font-size: 22px; font-weight: 700; color: var(--text-bright);
+  letter-spacing: -0.01em; margin: 44px 0 8px; padding-top: 26px;
+  border-top: 1px solid var(--border);
+}
+h2.section .num { color: var(--accent); margin-right: 10px; font-weight: 800; }
+h3.sub {
+  font-size: 15px; font-weight: 700; color: var(--text-bright);
+  text-transform: uppercase; letter-spacing: 0.05em; margin: 26px 0 12px;
+}
+p { margin-bottom: 12px; color: var(--text); }
+p.intro { font-size: 14.5px; color: var(--text); }
+a { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(59,130,246,0.3); word-break: break-word; }
+a:hover { border-bottom-color: var(--accent); }
+strong { color: var(--text-bright); }
+code {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12.5px; color: var(--accent4);
+  background: rgba(139,92,246,0.08); padding: 1px 5px; border-radius: 3px;
+}
+
+/* ---------- Cards / callouts ---------- */
+.callout {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px 20px; margin: 18px 0;
+  border-left: 3px solid var(--accent); font-size: 13.5px;
+}
+.callout.warn { border-left-color: var(--warn); background: rgba(239,68,68,0.05); }
+.callout.security { border-left-color: var(--rose); background: rgba(251,113,133,0.05); }
+.callout.good { border-left-color: var(--accent3); background: rgba(16,185,129,0.05); }
+.callout .lbl {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.07em; margin-bottom: 6px; color: var(--accent);
+}
+.callout.warn .lbl { color: var(--warn); }
+.callout.security .lbl { color: var(--rose); }
+.callout.good .lbl { color: var(--accent3); }
+
+/* ---------- Metric cards row ---------- */
+.metric-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 22px 0; }
+.metric-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px;
+}
+.metric-card .val { font-size: 26px; font-weight: 800; color: var(--text-bright); line-height: 1.1; }
+.metric-card .val.blue { color: var(--accent); }
+.metric-card .val.cyan { color: var(--cyan); }
+.metric-card .val.green { color: var(--accent3); }
+.metric-card .val.violet { color: var(--accent4); }
+.metric-card .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 5px; }
+
+/* ---------- Tables ---------- */
+table {
+  width: 100%; border-collapse: collapse; font-size: 13px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; overflow: hidden; margin: 14px 0 20px;
+}
+th {
+  text-align: left; padding: 10px 14px; background: var(--surface2);
+  color: var(--muted); text-transform: uppercase; font-size: 11px;
+  letter-spacing: 0.06em; border-bottom: 1px solid var(--border);
+}
+td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; line-height: 1.55; }
+tr:last-child td { border-bottom: none; }
+td.name { color: var(--text-bright); font-family: ui-monospace, monospace; font-size: 12px; }
+
+/* ---------- Status pills ---------- */
+.pill { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+.ok { background: rgba(16,185,129,0.1); color: var(--accent3); }
+.bad { background: rgba(239,68,68,0.1); color: var(--warn); }
+.warn { background: rgba(249,115,22,0.1); color: var(--accent2); }
+.na { background: rgba(107,114,128,0.12); color: var(--muted); }
+.cy { background: rgba(34,211,238,0.1); color: var(--cyan); }
+.vi { background: rgba(139,92,246,0.1); color: var(--accent4); }
+
+/* ---------- Steps ---------- */
+.steps { counter-reset: step; margin: 14px 0 20px; }
+.step {
+  position: relative; padding: 14px 18px 14px 56px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; margin-bottom: 10px; font-size: 13.5px;
+}
+.step:before {
+  counter-increment: step; content: counter(step);
+  position: absolute; left: 16px; top: 14px;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: rgba(59,130,246,0.15); color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700;
+}
+.step strong { display: block; margin-bottom: 3px; }
+
+/* ---------- Code ---------- */
+.cmd-wrap {
+  background: #05080d; border: 1px solid var(--border); border-radius: 8px;
+  margin: 12px 0 18px; overflow: hidden;
+}
+.cmd-header {
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 8px 14px; background: var(--surface2); border-bottom: 1px solid var(--border);
+}
+.cmd-title {
+  font-size: 11px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  display: flex; align-items: center; gap: 8px; min-width: 0;
+}
+.cmd-title .lang {
+  font-size: 9px; background: rgba(59,130,246,0.15); color: var(--accent);
+  padding: 2px 6px; border-radius: 3px; letter-spacing: 0.04em; flex-shrink: 0;
+}
+.copy-btn {
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+  background: transparent; border: 1px solid var(--border); color: var(--text);
+  padding: 5px 11px; border-radius: 4px; font-size: 11px; font-weight: 500;
+  font-family: inherit; cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+.copy-btn:hover { background: var(--surface); border-color: var(--accent); color: var(--accent); }
+.copy-btn.copied { background: rgba(16,185,129,0.15); border-color: var(--accent3); color: var(--accent3); }
+.copy-btn .icon-check { display: none; }
+.copy-btn.copied .icon-copy { display: none; }
+.copy-btn.copied .icon-check { display: inline-block; }
+.cmd {
+  margin: 0; padding: 14px 18px; overflow-x: auto;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px; line-height: 1.7; color: #d4d4d4;
+  background: transparent; border: none; border-radius: 0;
+}
+.cmd .c { color: #6a9955; }
+.cmd .f { color: #dcdcaa; }
+.cmd .s { color: #ce9178; }
+
+/* ---------- Diagram ---------- */
+.diagram-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px; margin: 20px 0 26px;
+}
+.diagram-card .cap {
+  font-size: 11px; color: var(--muted); text-transform: uppercase;
+  letter-spacing: 0.06em; margin-bottom: 14px; text-align: center;
+}
+
+/* ---------- Checkbox list ---------- */
+.checklist { list-style: none; margin: 12px 0 18px; }
+.checklist li {
+  position: relative; padding: 8px 0 8px 30px;
+  border-bottom: 1px solid var(--border); font-size: 13.5px;
+}
+.checklist li:last-child { border-bottom: none; }
+.checklist li:before {
+  content: "✓"; position: absolute; left: 4px; top: 8px;
+  color: var(--accent3); font-weight: 700;
+}
+.checklist li .chk-name { color: var(--text-bright); font-weight: 600; }
+
+/* ---------- Toast ---------- */
+.toast {
+  position: fixed; bottom: 24px; right: 24px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px 16px; font-size: 13px;
+  display: flex; align-items: center; gap: 10px;
+  transform: translateY(100px); opacity: 0; pointer-events: none;
+  transition: transform .3s ease, opacity .3s ease; z-index: 1000;
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { border-left: 3px solid var(--accent3); color: var(--text-bright); }
+.toast.error { border-left: 3px solid var(--warn); color: var(--text-bright); }
+.toast-icon { width: 18px; height: 18px; flex-shrink: 0; }
+.toast.success .toast-icon { color: var(--accent3); }
+.toast.error .toast-icon { color: var(--warn); }
+@media print { .toast { display: none !important; } }
+
+/* ---------- Troubleshooting ---------- */
+.trouble td:nth-child(3) { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); }
+
+/* ---------- Footer ---------- */
+.footer {
+  margin-top: 40px; padding: 20px 0; border-top: 1px solid var(--border);
+  font-size: 11.5px; color: var(--muted); line-height: 1.8;
+}
+.footer a { color: var(--accent); }
+
+/* ---------- Print ---------- */
+@media print {
+  body { background: #0a0e17 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html, body { margin: 0 !important; padding: 0 !important; }
+  .page { max-width: 100%; padding: 24px 28px; }
+  h2.section { break-after: avoid; }
+  table, .callout, .step, .cmd, .diagram-card, .metric-row { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ================= COVER ================= -->
+<div class="cover">
+  <div class="kicker">Tari Ootle · WooCommerce Integration</div>
+  <h1>Ootle Payment Gateway for WordPress<br>Complete Setup Guide</h1>
+  <div class="sub">Everything a new user needs to go from a blank server to a working WooCommerce checkout that accepts TARI — wallet daemon install, API key minting, plugin configuration, webhook connection, and first test payment.</div>
+  <div class="meta-row">
+    <span class="pill">Setup Guide</span>
+    <span class="pill cyan">WooCommerce</span>
+    <span class="pill violet">Tari Ootle L2</span>
+    <span class="pill muted">October 2026</span>
+  </div>
+</div>
+
+<div class="metric-row">
+  <div class="metric-card"><div class="val blue">4</div><div class="lbl">Components</div></div>
+  <div class="metric-card"><div class="val cyan">11</div><div class="lbl">Sections</div></div>
+  <div class="metric-card"><div class="val green">6</div><div class="lbl">Webhook Events</div></div>
+  <div class="metric-card"><div class="val violet">60–90</div><div class="lbl">Min Setup Time</div></div>
+</div>
+
+<p class="intro">This guide assumes <strong>no prior Tari or Ootle experience</strong>. It starts from downloading the wallet daemon on a blank server and ends with a completed test payment in WooCommerce. Every link is clickable. Every command is copy-paste ready.</p>
+
+<div class="callout warn">
+  <div class="lbl">Before you start</div>
+  You need: a Linux/macOS/Windows server with a shell · PHP 7.4+ with curl enabled · WordPress 6.0+ with WooCommerce 6.0+ installed · outbound HTTPS access to the Ootle indexer and your wallet daemon · testnet tTARI (free from the faucet) or real TARI for production.
+</div>
+
+<!-- ================= 1. OVERVIEW ================= -->
+<h2 class="section"><span class="num">1</span>Overview — how the pieces fit together</h2>
+
+<p>The plugin is one of three moving parts. WooCommerce handles the storefront and orders. The <strong>wallet daemon</strong> holds your keys and signs transactions. The <strong>indexer</strong> reads on-chain state and streams events. Nothing works until all three are running and reachable.</p>
+
+<!-- Architecture diagram -->
+<div class="diagram-card">
+  <div class="cap">Figure 1 — System Architecture: WooCommerce → Wallet Daemon → Ootle Network</div>
+  <svg viewBox="0 0 900 340" xmlns="http://www.w3.org/2000/svg" font-family="'JetBrains Mono', monospace">
+    <defs>
+      <pattern id="grid1" width="40" height="40" patternUnits="userSpaceOnUse">
+        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+      </pattern>
+      <marker id="arrow1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
+      </marker>
+      <marker id="arrowR" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#fb7185"/>
+      </marker>
+      <marker id="arrowE" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M 0 0 L 10 5 L 0 10 z" fill="#34d399"/>
+      </marker>
+    </defs>
+
+    <!-- Background -->
+    <rect width="900" height="340" fill="#020617" rx="10"/>
+    <rect width="900" height="340" fill="url(#grid1)" rx="10"/>
+
+    <!-- Arrows (behind boxes) -->
+    <!-- WP -> Daemon -->
+    <line x1="235" y1="80" x2="375" y2="80" stroke="#94a3b8" stroke-width="1.8" marker-end="url(#arrow1)"/>
+    <line x1="375" y1="100" x2="235" y2="100" stroke="#94a3b8" stroke-width="1.8" marker-end="url(#arrow1)"/>
+    <text x="305" y="72" fill="#6b7280" font-size="9" text-anchor="middle">JSON-RPC</text>
+    <text x="305" y="120" fill="#6b7280" font-size="9" text-anchor="middle">Bearer tw_</text>
+
+    <!-- Daemon -> Network -->
+    <line x1="545" y1="80" x2="675" y2="80" stroke="#34d399" stroke-width="1.8" marker-end="url(#arrowE)"/>
+    <text x="610" y="72" fill="#6b7280" font-size="9" text-anchor="middle">submit tx</text>
+    <line x1="675" y1="100" x2="545" y2="100" stroke="#34d399" stroke-width="1.8" marker-end="url(#arrowE)"/>
+    <text x="610" y="120" fill="#6b7280" font-size="9" text-anchor="middle">events</text>
+
+    <!-- Indexer -> WP (webhook, dashed rose) -->
+    <path d="M 730 150 C 730 220, 300 200, 160 190" fill="none" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="5,4" marker-end="url(#arrowR)"/>
+    <text x="440" y="240" fill="#fb7185" font-size="9" text-anchor="middle">webhook: payment event → ?wc-api=ootle_webhook</text>
+
+    <!-- Indexer reads from network -->
+    <line x1="730" y1="120" x2="730" y2="150" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="3,3" marker-end="url(#arrow1)"/>
+
+    <!-- ===== WooCommerce box (Frontend) ===== -->
+    <rect x="20" y="45" width="200" height="90" rx="6" fill="#0f172a" stroke="#22d3ee" stroke-width="1.5"/>
+    <rect x="20" y="45" width="200" height="90" rx="6" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.5"/>
+    <text x="120" y="72" fill="#22d3ee" font-size="13" font-weight="600" text-anchor="middle">WordPress</text>
+    <text x="120" y="90" fill="#94a3b8" font-size="10" text-anchor="middle">WooCommerce + Plugin</text>
+    <text x="120" y="108" fill="#6b7280" font-size="9" text-anchor="middle">checkout · orders · redirects</text>
+    <text x="120" y="124" fill="#6b7280" font-size="9" text-anchor="middle">yoursite.com</text>
+
+    <!-- ===== Wallet daemon box (Backend) ===== -->
+    <rect x="380" y="45" width="160" height="90" rx="6" fill="#0f172a" stroke="#34d399" stroke-width="1.5"/>
+    <rect x="380" y="45" width="160" height="90" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
+    <text x="460" y="72" fill="#34d399" font-size="13" font-weight="600" text-anchor="middle">tari_ootle_walletd</text>
+    <text x="460" y="90" fill="#94a3b8" font-size="10" text-anchor="middle">holds keys · signs</text>
+    <text x="460" y="108" fill="#6b7280" font-size="9" text-anchor="middle">JSON-RPC :5100</text>
+    <text x="460" y="124" fill="#6b7280" font-size="9" text-anchor="middle">--network esmeralda|mainnet</text>
+
+    <!-- ===== Ootle network box (Cloud/External) ===== -->
+    <rect x="680" y="45" width="200" height="90" rx="6" fill="#0f172a" stroke="#fbbf24" stroke-width="1.5"/>
+    <rect x="680" y="45" width="200" height="90" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.5"/>
+    <text x="780" y="72" fill="#fbbf24" font-size="13" font-weight="600" text-anchor="middle">Tari Ootle L2</text>
+    <text x="780" y="90" fill="#94a3b8" font-size="10" text-anchor="middle">validator network</text>
+    <text x="780" y="108" fill="#6b7280" font-size="9" text-anchor="middle">esmeralda testnet / mainnet</text>
+    <text x="780" y="124" fill="#6b7280" font-size="9" text-anchor="middle">payments on-chain</text>
+
+    <!-- ===== Indexer box (Database) ===== -->
+    <rect x="680" y="155" width="200" height="80" rx="6" fill="#0f172a" stroke="#a78bfa" stroke-width="1.5"/>
+    <rect x="680" y="155" width="200" height="80" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5"/>
+    <text x="780" y="182" fill="#a78bfa" font-size="13" font-weight="600" text-anchor="middle">Ootle Indexer</text>
+    <text x="780" y="200" fill="#94a3b8" font-size="10" text-anchor="middle">state + event stream</text>
+    <text x="780" y="218" fill="#6b7280" font-size="9" text-anchor="middle">ootle-indexer-a.tari.com</text>
+
+    <!-- ===== Legend ===== -->
+    <rect x="20" y="270" width="860" height="52" rx="6" fill="rgba(17,24,39,0.7)" stroke="#1f2a3f" stroke-width="1"/>
+    <text x="36" y="290" fill="#6b7280" font-size="10" font-weight="600">LEGEND</text>
+    <rect x="110" y="281" width="14" height="14" rx="3" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1.2"/>
+    <text x="132" y="292" fill="#c8cdd8" font-size="10">Frontend (WordPress)</text>
+    <rect x="290" y="281" width="14" height="14" rx="3" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.2"/>
+    <text x="312" y="292" fill="#c8cdd8" font-size="10">Backend (Wallet Daemon)</text>
+    <rect x="480" y="281" width="14" height="14" rx="3" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.2"/>
+    <text x="502" y="292" fill="#c8cdd8" font-size="10">Database (Indexer)</text>
+    <rect x="640" y="281" width="14" height="14" rx="3" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1.2"/>
+    <text x="662" y="292" fill="#c8cdd8" font-size="10">Network (Ootle L2)</text>
+    <line x1="36" y1="312" x2="60" y2="312" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="5,4"/>
+    <text x="66" y="315" fill="#c8cdd8" font-size="10">Webhook (signed, HMAC-SHA256)</text>
+  </svg>
+</div>
+
+<p><strong>Checkout flow, end to end:</strong> customer clicks "Pay with Ootle" → plugin calls the wallet daemon's JSON-RPC to create a payment → customer pays on the Ootle network → an <code>OrderPlaced</code> event lands in the indexer → your webhook listener POSTs to <code>?wc-api=ootle_webhook</code> → the plugin verifies the signature and marks the order complete.</p>
+
+<!-- ================= 2. INSTALL WALLET ================= -->
+<h2 class="section"><span class="num">2</span>Install the Ootle wallet daemon</h2>
+
+<p>The wallet daemon is the only process that holds your private keys. It signs every transaction the gateway sends. Everything else is read-only. Run it somewhere your WordPress server can reach over the network, and nowhere else.</p>
+
+<h3 class="sub">2.1 · Download the wallet daemon</h3>
+<p>The release ships a standalone <code>tari_ootle_walletd</code> binary per platform. <strong>Note:</strong> there is no <code>tari_ootle_wallet_cli</code> binary in the release — the CLI is not published as a prebuilt asset. You interact with the daemon directly over JSON-RPC (which is what the plugin does).</p>
+<table>
+  <thead><tr><th>Platform</th><th>Asset filename (v0.45.0)</th></tr></thead>
+  <tbody>
+    <tr><td class="name">Linux x86_64</td><td><code>tari_ootle_walletd-0.45.0-9c62606-linux-x86_64</code></td></tr>
+    <tr><td class="name">Linux arm64</td><td><code>tari_ootle_walletd-0.45.0-9c62606-linux-arm64</code></td></tr>
+    <tr><td class="name">macOS arm64 (Apple Silicon)</td><td><code>tari_ootle_walletd-0.45.0-9c62606-macos-arm64</code></td></tr>
+    <tr><td class="name">Windows x64</td><td><code>tari_ootle_walletd-0.45.0-9c62606-windows-x64.exe</code></td></tr>
+  </tbody>
+</table>
+<p>Get the current filenames and hashes from the <a href="https://github.com/tari-project/tari-ootle/releases">releases page</a> — the build hash (<code>9c62606</code>) changes with each release.</p>
+<div class="steps">
+  <div class="step"><strong>Download the binary</strong>Grab the <code>tari_ootle_walletd</code> asset for your OS from the releases page.</div>
+  <div class="step"><strong>Verify the checksum</strong>Each asset has a matching <code>.sha256</code> file. Compare before running:<div class="cmd-wrap"><div class="cmd-header"><div class="cmd-title"><span class="lang">Shell</span> Verify the download</div><button class="copy-btn" data-code-target="code-verify-hash" aria-label="Copy command to clipboard"><svg class="icon-copy" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><svg class="icon-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg><span class="copy-text">Copy</span></button></div><pre class="cmd" id="code-verify-hash"><span class="c"># Linux example — paste the hash from the release's .sha256 file</span>
+echo "8cfdae03cc7dc7987752b2f1ae94046fc5c15258e1e26e0587977f7230712fae  tari_ootle_walletd-0.45.0-9c62606-linux-x86_64" | sha256sum -c -</pre></div></div>
+  <div class="step"><strong>Make it executable</strong>Run <code>chmod +x tari_ootle_walletd</code> in the download directory.</div>
+  <div class="step"><strong>Place it on your PATH</strong>Move it to <code>~/.local/bin/</code> or <code>/usr/local/bin/</code> (any directory already on PATH) so you can call it from anywhere.</div>
+</div>
+
+<h3 class="sub">2.2 · Choose your network</h3>
+<table>
+  <thead><tr><th>Network</th><th>Flag</th><th>Use case</th><th>Funds</th></tr></thead>
+  <tbody>
+    <tr><td class="name">esmeralda</td><td><code>--network esmeralda</code></td><td>Testing, development, staging (default)</td><td><span class="pill ok">Free faucet</span></td></tr>
+    <tr><td class="name">mainnet</td><td><code>--network mainnet</code></td><td>Live production payments</td><td><span class="pill bad">Real TARI</span></td></tr>
+  </tbody>
+</table>
+<div class="callout">
+  <div class="lbl">Start on testnet</div>
+  Mistakes on testnet cost nothing. Get the entire flow working on esmeralda first, then repeat the same steps on mainnet with a fresh, funded account and a production API key.
+</div>
+
+<h3 class="sub">2.3 · Start the daemon</h3>
+<p>This command runs the daemon on the esmeralda testnet, bound to localhost so only this machine reaches it. The web UI is served on the same host at port 5100.</p>
+<div class="cmd-wrap">
+  <div class="cmd-header">
+    <div class="cmd-title"><span class="lang">Shell</span> Start the wallet daemon on testnet</div>
+    <button class="copy-btn" data-code-target="code-start-daemon" aria-label="Copy command to clipboard">
+      <svg class="icon-copy" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      <svg class="icon-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      <span class="copy-text">Copy</span>
+    </button>
+  </div>
+  <pre class="cmd" id="code-start-daemon">tari_ootle_walletd --network esmeralda --listen-on 127.0.0.1:5100 --authentication none --enable-vite-dev-port 5173</pre>
+</div>
+<table>
+  <thead><tr><th>Option</th><th>Meaning</th></tr></thead>
+  <tbody>
+    <tr><td class="name">--network esmeralda</td><td>Connect to the esmeralda testnet (the default). Use <code>mainnet</code> for production.</td></tr>
+    <tr><td class="name">--listen-on 127.0.0.1:5100</td><td>Bind address. Use <code>127.0.0.1:5100</code> if the plugin runs on the same machine; <code>0.0.0.0:5100</code> to accept remote connections.</td></tr>
+    <tr><td class="name">--authentication none</td><td>Disables WebAuthn passkey login so you can drive the daemon over JSON-RPC. <strong>Test/disposable wallets only.</strong></td></tr>
+    <tr><td class="name">--enable-vite-dev-port 5173</td><td>Sets the WebAuthn origin to <code>http://localhost:5173</code> and enables permissive CORS — fixes the "invalid domain" error in the web UI.</td></tr>
+    <tr><td class="name">Default ports</td><td>5100 = JSON-RPC + web UI (the plugin connects here)</td></tr>
+  </tbody>
+</table>
+<div class="callout warn">
+  <div class="lbl">Security warning you must read</div>
+  The command above runs without additional daemon-level authentication — appropriate only for a disposable testnet wallet. The daemon logs a loud warning saying so, and it is correct. <strong>Never expose an unauthenticated daemon holding real value.</strong> In production, keep the daemon bound to <code>127.0.0.1</code> or a private network, and front it with an HTTPS reverse proxy plus a firewall.
+</div>
+<p>Open <a href="http://localhost:5100">http://localhost:5100</a> in your browser to reach the wallet web UI — create accounts, check balances, claim testnet funds, and manage API keys from there.</p>
+
+<!-- ================= 3. ACCOUNT + FUNDS ================= -->
+<h2 class="section"><span class="num">3</span>Create an account and fund it</h2>
+
+<h3 class="sub">3.1 · Create a merchant account</h3>
+<p>There is no wallet CLI binary in the release — you drive the daemon over its JSON-RPC endpoint. First bootstrap a bearer token (with <code>--authentication none</code>, this needs no passkey), then create the account.</p>
+<div class="cmd-wrap">
+  <div class="cmd-header">
+    <div class="cmd-title"><span class="lang">Shell</span> Bootstrap an Admin token and create the merchant account</div>
+    <button class="copy-btn" data-code-target="code-create-account" aria-label="Copy commands to clipboard">
+      <svg class="icon-copy" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      <svg class="icon-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      <span class="copy-text">Copy</span>
+    </button>
+  </div>
+  <pre class="cmd" id="code-create-account"><span class="c"># 1. Bootstrap an Admin bearer token (auth=none: no passkey, no WebAuthn)</span>
+TOKEN=$(curl -s -X POST http://127.0.0.1:5100/json_rpc -H <span class="s">"Content-Type: application/json"</span> \
+  -d <span class="s">'{"jsonrpc":"2.0","method":"auth.request","params":{"permissions":["Admin"],"credentials":{"None":null}},"id":1}'</span> \
+  | python3 -c <span class="s">"import sys,json; print(json.load(sys.stdin)['result']['token'])"</span>)
+
+<span class="c"># 2. Create the merchant account (returns the account + its Ootle address)</span>
+curl -s -X POST http://127.0.0.1:5100/json_rpc -H <span class="s">"Content-Type: application/json"</span> \
+  -H <span class="s">"Authorization: Bearer $TOKEN"</span> \
+  -d <span class="s">'{"jsonrpc":"2.0","method":"accounts.create","params":{"name":"merchant"},"id":2}'</span> \
+  | python3 -m json.tool</pre>
+</div>
+<p>Note the <code>owner_public_key</code> and the <code>otl_esm_…</code> address from the response — you paste the public key into the plugin's <strong>Merchant Public Key</strong> field later.</p>
+<div class="callout">
+  <div class="lbl">Why {"None":null}?</div>
+  Under <code>--authentication none</code>, <code>auth.request</code> expects a tagged enum credential. <code>{"None":null}</code> is the variant that satisfies it — this is the documented bootstrap that replaces the WebAuthn passkey flow, and it is what makes the "invalid domain" error irrelevant for programmatic access.
+</div>
+
+<h3 class="sub">3.2 · Claim testnet funds (testnet only)</h3>
+<p>Two ways, both free on esmeralda:</p>
+<table>
+  <thead><tr><th>Method</th><th>How</th></tr></thead>
+  <tbody>
+    <tr><td class="name">Web UI</td><td>Click <strong>"Claim Testnet Funds"</strong> at <a href="http://localhost:5100">http://localhost:5100</a></td></tr>
+    <tr><td class="name">JSON-RPC</td><td>Call <code>accounts.create_free_test_coins</code> against the daemon (below)</td></tr>
+  </tbody>
+</table>
+<p>The account argument is a tagged enum, not a bare name — pass the component address as <code>{"ComponentAddress":"…"}</code>. A claim also needs a <code>max_fee</code>.</p>
+<div class="cmd-wrap">
+  <div class="cmd-header">
+    <div class="cmd-title"><span class="lang">Shell</span> Claim testnet funds</div>
+    <button class="copy-btn" data-code-target="code-claim-faucet" aria-label="Copy command to clipboard">
+      <svg class="icon-copy" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      <svg class="icon-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      <span class="copy-text">Copy</span>
+    </button>
+  </div>
+  <pre class="cmd" id="code-claim-faucet">ADDR=<span class="s">"component_4293145b…"</span>  <span class="c"># your account's component_address</span>
+curl -s -X POST http://127.0.0.1:5100/json_rpc -H <span class="s">"Content-Type: application/json"</span> \
+  -H <span class="s">"Authorization: Bearer $TOKEN"</span> \
+  -d <span class="s">"{\"jsonrpc\":\"2.0\",\"method\":\"accounts.create_free_test_coins\",\"params\":{\"account\":{\"ComponentAddress\":\"$ADDR\"},\"max_fee\":1000},\"id\":3}"</span></pre>
+</div>
+<div class="callout warn">
+  <div class="lbl">Faucet can be empty — check first</div>
+  The shared esmeralda faucet runs dry. Before claiming, check it: <code>accounts.get_faucet_balance</code> returns <code>balance</code> and <code>claim_amount</code>. If <code>balance &lt; claim_amount</code> the claim fails with "the testnet faucet does not hold enough funds." That is a testnet top-up issue on Tari's side, not a client bug — ask in the Tari Discord #development channel and retry once refilled. The alternative is claiming tTARI by burning XTM on L1, which needs real funds.
+</div>
+
+<h3 class="sub">3.3 · Confirm your balance</h3>
+<div class="cmd-wrap">
+  <div class="cmd-header">
+    <div class="cmd-title"><span class="lang">Shell</span> Confirm the account has a non-zero balance</div>
+    <button class="copy-btn" data-code-target="code-check-balance" aria-label="Copy command to clipboard">
+      <svg class="icon-copy" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      <svg class="icon-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      <span class="copy-text">Copy</span>
+    </button>
+  </div>
+  <pre class="cmd" id="code-check-balance">curl -s -X POST http://127.0.0.1:5100/json_rpc -H <span class="s">"Content-Type: application/json"</span> \
+  -H <span class="s">"Authorization: Bearer $TOKEN"</span> \
+  -d <span class="s">"{\"jsonrpc\":\"2.0\",\"method\":\"accounts.get_balances\",\"params\":{\"account\":{\"ComponentAddress\":\"$ADDR\"}},\"id\":4}"</span> \
+  | python3 -m json.tool</pre>
+</div>
+<p>You must see a non-zero balance before moving on. An empty account cannot pay transaction fees, and every Ootle transaction pays fees in TARI.</p>
+
+<!-- ================= 4. API KEY ================= -->
+<h2 class="section"><span class="num">4</span>Mint an API key</h2>
+
+<p>The plugin authenticates to the wallet daemon with a long-lived, permission-scoped API key. An Admin mints it once; the plugin then presents it as a <code>Bearer</code> token on every JSON-RPC call. There is no interactive login, no JWT exchange, and no session to refresh.</p>
+
+<h3 class="sub">4.1 · How the key works</h3>
+<table>
+  <thead><tr><th>Aspect</th><th>Detail</th></tr></thead>
+  <tbody>
+    <tr><td class="name">Format</td><td>32 random bytes, prefixed with <code>tw_</code>, base64-encoded</td></tr>
+    <tr><td class="name">Shown</td><td><span class="pill bad">Exactly once</span> at creation — the daemon cannot display it again</td></tr>
+    <tr><td class="name">Stored</td><td>Only a SHA-256 hash — a database leak does not expose the key</td></tr>
+    <tr><td class="name">Sent as</td><td><code>Authorization: Bearer tw_...</code> on every request</td></tr>
+    <tr><td class="name">Revocation</td><td>Immediate — the next request after revoke fails, no cache</td></tr>
+  </tbody>
+</table>
+<div class="callout security">
+  <div class="lbl">Copy it the moment it appears</div>
+  The raw key is displayed once, in the creation dialog, and then never again. Close the dialog and it is gone. Paste it directly into your password manager — not a text file, not a ticket, not chat.
+</div>
+
+<h3 class="sub">4.2 · Choose the smallest scope set</h3>
+<p>Grant only the permissions the plugin actually needs. An agent cannot self-promote: permissions come from the stored key row, not from anything the plugin sends.</p>
+<table>
+  <thead><tr><th>Plugin role</th><th>Recommended scopes</th></tr></thead>
+  <tbody>
+    <tr><td class="name">Monitoring only</td><td><code>AccountInfo</code>, <code>TransactionGet</code></td></tr>
+    <tr><td class="name">Full payment gateway</td><td><code>AccountInfo</code>, <code>TransactionSend_&lt;your-account&gt;</code>, <code>TransactionGet</code></td></tr>
+  </tbody>
+</table>
+<div class="callout security">
+  <div class="lbl">Never grant Admin by default</div>
+  <code>Admin</code> lets the key mint, list, and revoke other keys. Grant it only with a deliberate reason, and only with the explicit confirmation flag. For a payment gateway, the transaction-send scope for your one merchant account is enough.
+</div>
+
+<h3 class="sub">4.3 · Create the key via Web UI (optional)</h3>
+<p>The web UI works too, but only if WebAuthn can reach it — open <a href="http://localhost:5100/api-keys">http://localhost:5100/api-keys</a> and log in via passkey. If you hit an "invalid domain" error (WebAuthn rejects non-localhost origins), use the JSON-RPC method in 4.4 instead — it needs no browser at all.</p>
+<div class="steps">
+  <div class="step"><strong>Navigate to API Keys</strong>Go to the <code>/api-keys</code> route in the wallet web UI.</div>
+  <div class="step"><strong>Click Create API Key</strong>Give it a friendly name, e.g. <code>wordpress-gateway</code>.</div>
+  <div class="step"><strong>Enter the scopes</strong>Paste the comma-separated scope list from the table in 4.2.</div>
+  <div class="step"><strong>Set an expiry (recommended)</strong>Prefer the shortest expiry that fits. A leaked short-lived key dies on its own without manual revocation.</div>
+  <div class="step"><strong>Copy the raw key immediately</strong>It appears once, with a copy button. Store it before dismissing the dialog.</div>
+</div>
+
+<h3 class="sub">4.4 · Create the key over JSON-RPC (no CLI, no passkey)</h3>
+<p>With <code>--authentication none</code>, mint the key directly against the daemon using the bootstrap token. The raw key prints to the response <strong>once</strong> — pipe it straight into your secret store.</p>
+<div class="cmd-wrap">
+  <div class="cmd-header">
+    <div class="cmd-title"><span class="lang">Shell</span> Mint an API key for the WordPress gateway</div>
+    <button class="copy-btn" data-code-target="code-create-apikey" aria-label="Copy commands to clipboard">
+      <svg class="icon-copy" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      <svg class="icon-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      <span class="copy-text">Copy</span>
+    </button>
+  </div>
+  <pre class="cmd" id="code-create-apikey"><span class="c"># Basic key with two scopes</span>
+curl -s -X POST http://127.0.0.1:5100/json_rpc -H <span class="s">"Content-Type: application/json"</span> \
+  -H <span class="s">"Authorization: Bearer $TOKEN"</span> \
+  -d <span class="s">'{"jsonrpc":"2.0","method":"auth.create_api_key","params":{"name":"wordpress-gateway","permissions":["AccountInfo","TransactionGet"]},"id":3}'</span> \
+  | python3 -m json.tool
+
+<span class="c"># With an expiry (unix seconds; None = never)</span>
+curl -s -X POST http://127.0.0.1:5100/json_rpc -H <span class="s">"Content-Type: application/json"</span> \
+  -H <span class="s">"Authorization: Bearer $TOKEN"</span> \
+  -d <span class="s">'{"jsonrpc":"2.0","method":"auth.create_api_key","params":{"name":"wordpress-gateway","permissions":["AccountInfo","TransactionGet"],"expires_at":1893456000},"id":4}'</span> \
+  | python3 -m json.tool
+
+<span class="c"># Granting Admin requires the explicit confirm_admin flag</span>
+curl -s -X POST http://127.0.0.1:5100/json_rpc -H <span class="s">"Content-Type: application/json"</span> \
+  -H <span class="s">"Authorization: Bearer $TOKEN"</span> \
+  -d <span class="s">'{"jsonrpc":"2.0","method":"auth.create_api_key","params":{"name":"full-access","permissions":["Admin"],"confirm_admin":true},"id":5}'</span> \
+  | python3 -m json.tool</pre>
+</div>
+<table>
+  <thead><tr><th>Task</th><th>RPC method</th></tr></thead>
+  <tbody>
+    <tr><td class="name">List keys</td><td><code>auth.list_api_keys</code> — metadata only, never raw keys</td></tr>
+    <tr><td class="name">Revoke</td><td><code>auth.revoke_api_key</code> with <code>{"id":&lt;n&gt;}</code> — effective immediately</td></tr>
+  </tbody>
+</table>
+
+<h3 class="sub">4.5 · What the daemon protects you from</h3>
+<ul class="checklist">
+  <li><span class="chk-name">Wrong, revoked, or unknown key</span> — identical error message and timing for all three; an attacker cannot enumerate valid hashes.</li>
+  <li><span class="chk-name">Out-of-scope request</span> — the stored scope set is enforced against every endpoint; the request fails with <code>InsufficientPermissions</code>.</li>
+  <li><span class="chk-name">Non-admin minting keys</span> — rejected; only <code>Admin</code> reaches the key-management endpoints.</li>
+  <li><span class="chk-name">Expired key</span> — silently filtered out; the next request fails exactly like a revoked key.</li>
+</ul>
+
+<!-- ================= 5. INSTALL PLUGIN ================= -->
+<h2 class="section"><span class="num">5</span>Install the plugin</h2>
+
+<div class="steps">
+  <div class="step"><strong>Log into WordPress admin</strong>Any account with plugin-install privileges works.</div>
+  <div class="step"><strong>Go to Plugins → Add New → Upload Plugin</strong>Choose the <code>ootle-payment-gateway.zip</code> file and click <strong>Install Now</strong>.</div>
+  <div class="step"><strong>Activate the plugin</strong>Click <strong>Activate Plugin</strong> after installation completes.</div>
+  <div class="step"><strong>Confirm WooCommerce is active</strong>The plugin requires it and silently does nothing without it. The gateway appears under WooCommerce → Settings → Payments automatically — no code edits needed.</div>
+</div>
+<div class="callout good">
+  <div class="lbl">What activation does</div>
+  The plugin registers itself under gateway id <code>ootle</code> via the <code>woocommerce_payment_gateways</code> filter and flushes rewrite rules so the webhook endpoint resolves. Nothing else is written to your database until you save the settings.
+</div>
+
+<!-- ================= 6. CONFIGURE ================= -->
+<h2 class="section"><span class="num">6</span>Configure the plugin</h2>
+
+<p>Go to <strong>WooCommerce → Settings → Payments</strong>. You'll see the <em>Payment providers</em> list — find the <strong>Ootle Payment Gateway</strong> row (badged "Test mode") and click its <strong>Manage</strong> button to open the settings form. Fill in every field below, then <strong>Save changes</strong> at the bottom of the page.</p>
+
+<div class="diagram-card">
+  <div class="cap">Figure 2 — The Payments providers list; click Manage on the Ootle row</div>
+  <img src="/home/luci666/AI/tari-ootle-wordpress/ootle-payment-gateway/docs/ootle-payments-list.png" alt="WooCommerce Payments providers list showing the Ootle Payment Gateway row with a Manage button" style="width:100%; max-width:680px; display:block; margin:0 auto; border:1px solid var(--border); border-radius:8px;">
+</div>
+
+<div class="diagram-card">
+  <div class="cap">Figure 3 — The Ootle Payment Gateway settings page (stealth mode enabled, merchant fields filled in)</div>
+  <img src="/home/luci666/AI/tari-ootle-wordpress/ootle-payment-gateway/docs/ootle-gateway-settings-cropped.png" alt="Ootle Payment Gateway settings page with Stealth (Confidential) Payments enabled and merchant account fields filled in" style="width:100%; max-width:640px; display:block; margin:0 auto; border:1px solid var(--border); border-radius:8px;">
+</div>
+
+<table>
+  <thead><tr><th>Field</th><th>What to enter</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td class="name">Enable Ootle Gateway</td><td>Check the box</td><td><span class="pill bad">Required</span> off by default</td></tr>
+    <tr><td class="name">Payment Method Title</td><td>Pay with Ootle</td><td>Shown to customers at checkout</td></tr>
+    <tr><td class="name">Description</td><td>Pay securely via the Tari Ootle network</td><td>Shown under the title</td></tr>
+    <tr><td class="name">API Key</td><td>The <code>tw_...</code> key from section 4</td><td>Paste exactly — no quotes, no extra spaces</td></tr>
+    <tr><td class="name">API Secret</td><td>Leave blank unless signing is enabled</td><td>Only needed if you turn on HMAC request signing</td></tr>
+    <tr><td class="name">Webhook Secret</td><td>A random 32+ character string you generate</td><td>See 6.3 below</td></tr>
+    <tr><td class="name">API Base URL</td><td><code>http://your-daemon-host:5100</code></td><td>Your wallet daemon JSON-RPC endpoint</td></tr>
+    <tr><td class="name">Test Mode</td><td>Check for testnet</td><td>Disables SSL verification for local/self-signed daemons</td></tr>
+  </tbody>
+</table>
+
+<h3 class="sub">6.1 · Stealth (Confidential) Payments — the six fields</h3>
+<p>Checking <strong>Stealth (Confidential) Payments</strong> turns on private settlement: every order settles to a
+<b>one-time stealth address</b> with a <b>blinded amount</b> (Pedersen commitment) and an <b>encrypted on-chain
+memo</b>. Six fields control this. Fill them from your wallet daemon's JSON-RPC responses.</p>
+<table>
+  <thead><tr><th>Field</th><th>What to enter</th><th>Where to get it</th></tr></thead>
+  <tbody>
+    <tr><td class="name">Stealth (Confidential) Payments</td><td>Check the box</td><td><span class="pill bad">Required</span> to enable confidential settlement</td></tr>
+    <tr><td class="name">Merchant Account</td><td>Your account <code>component_…</code> address</td><td>From <code>accounts.create</code> or <code>accounts.list</code> — the <code>component_address</code> field</td></tr>
+    <tr><td class="name">Merchant Public Key</td><td>The account <code>owner_public_key</code></td><td>From <code>accounts.create</code> / <code>accounts.list</code> — used to derive stealth addresses</td></tr>
+    <tr><td class="name">Resource Address</td><td>The <code>resource_…</code> address of your token</td><td>From <code>accounts.associate_stealth_resource</code> — the confidential resource you accept</td></tr>
+    <tr><td class="name">Resource View Key</td><td>The resource <code>view_key</code></td><td>From <code>accounts.associate_stealth_resource</code> — lets the merchant decrypt received amounts</td></tr>
+    <tr><td class="name">Max Fee (µT)</td><td>Maximum fee per transaction, in micro-Tari</td><td>Your choice — e.g. <code>1000</code> (1,000,000 µT = 1 TARI). Set a ceiling so fees never surprise you</td></tr>
+  </tbody>
+</table>
+
+<h4 class="sub">Getting the values from the daemon</h4>
+<p>With your Admin token from section 3, run these against <code>http://127.0.0.1:5100/json_rpc</code>:</p>
+
+<div class="cmd">
+  <div class="cmd-title"><span class="lang">JSON-RPC</span> 1. List your accounts (gives Merchant Account + Merchant Public Key)</div>
+<pre><code>{
+  "jsonrpc": "2.0",
+  "method": "accounts.list",
+  "params": { "offset": 0, "limit": 10 },
+  "id": 1
+}</code></pre>
+</div>
+<p>Copy <code>component_address</code> → <strong>Merchant Account</strong>, and <code>owner_public_key</code> → <strong>Merchant Public Key</strong>.</p>
+
+<div class="cmd">
+  <div class="cmd-title"><span class="lang">JSON-RPC</span> 2. Associate the stealth resource (gives Resource Address + View Key)</div>
+<pre><code>{
+  "jsonrpc": "2.0",
+  "method": "accounts.associate_stealth_resource",
+  "params": {
+    "account": { "ComponentAddress": "component_…" },
+    "resource_address": "resource_…"
+  },
+  "id": 2
+}</code></pre>
+</div>
+<p>The response returns the resource <code>address</code> and <code>view_key</code>. Paste them into
+<strong>Resource Address</strong> and <strong>Resource View Key</strong>.</p>
+
+<div class="cmd">
+  <div class="cmd-title"><span class="lang">JSON-RPC</span> 3. Confirm your account is funded (fees)</div>
+<pre><code>{
+  "jsonrpc": "2.0",
+  "method": "accounts.get_balances",
+  "params": { "account": { "ComponentAddress": "component_…" } },
+  "id": 3
+}</code></pre>
+</div>
+<p>Ensure the account holds enough TARI to cover the <strong>Max Fee</strong> you set, plus settlement. On testnet,
+claim from the faucet with <code>accounts.create_free_test_coins</code>.</p>
+
+<div class="note">
+  <strong>How a stealth checkout works:</strong> when a customer pays, the daemon derives a fresh one-time stealth
+  address from your <em>Merchant Public Key</em>, blinds the amount into a Pedersen commitment, encrypts the order
+  reference into the memo, then submits via <code>accounts.stealth_transfer</code>. Only you (holding the view key)
+  can decrypt the amount and memo — observers cannot link orders or read prices. The merchant account args are
+  <b>tagged enums</b>: use <code>{"ComponentAddress":"component_…"}</code>, never a bare string.
+</div>
+
+<h3 class="sub">6.2 · Finding your API base URL</h3>
+<table>
+  <thead><tr><th>Daemon location</th><th>API Base URL value</th></tr></thead>
+  <tbody>
+    <tr><td class="name">Same machine as WordPress</td><td><code>http://127.0.0.1:5100</code></td></tr>
+    <tr><td class="name">Separate server on your LAN</td><td><code>http://192.168.x.x:5100</code></td></tr>
+    <tr><td class="name">Remote VPS with a domain</td><td><code>https://ootle.yourdomain.com</code> (reverse-proxy the daemon)</td></tr>
+  </tbody>
+</table>
+<div class="callout warn">
+  <div class="lbl">Production must use HTTPS</div>
+  In production, always front the daemon with a reverse proxy (nginx or Caddy) and a valid certificate, so the API key is never sent over plain HTTP. Test Mode disables SSL verification — it must be <strong>off</strong> in production.
+</div>
+
+<h3 class="sub">6.3 · Generate a webhook secret</h3>
+<p>Run this in your terminal and paste the output into the Webhook Secret field. This secret signs outgoing webhook payloads so the plugin can prove they came from a trusted source. It is never sent to the wallet daemon.</p>
+<div class="cmd-wrap">
+  <div class="cmd-header">
+    <div class="cmd-title"><span class="lang">Shell</span> Generate the webhook secret</div>
+    <button class="copy-btn" data-code-target="code-gen-secret" aria-label="Copy command to clipboard">
+      <svg class="icon-copy" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      <svg class="icon-check" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      <span class="copy-text">Copy</span>
+    </button>
+  </div>
+  <pre class="cmd" id="code-gen-secret">openssl rand -hex 32</pre>
+</div>
+
+<!-- ================= 7. WEBHOOK ================= -->
+<h2 class="section"><span class="num">7</span>Connect the webhook</h2>
+
+<p>Without a webhook, orders stay in "pending" forever — the plugin never learns the payment succeeded. Your indexer listener (or any monitoring service) must POST to the endpoint below whenever an on-chain payment event matches an order.</p>
+
+<table>
+  <thead><tr><th>Item</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><td class="name">Webhook URL</td><td><code>https://yoursite.com/?wc-api=ootle_webhook</code></td></tr>
+    <tr><td class="name">Method</td><td><code>POST</code></td></tr>
+    <tr><td class="name">Content-Type</td><td><code>application/json</code></td></tr>
+    <tr><td class="name">Auth header</td><td><code>X-Ootle-Signature: HMAC-SHA256 of the raw body, keyed with your webhook secret</code></td></tr>
+  </tbody>
+</table>
+
+<p>The payload carries an event type and a session id. The plugin looks up the order by session id and updates its status. Six event types are supported:</p>
+
+<table>
+  <thead><tr><th>Event</th><th>Effect on the order</th></tr></thead>
+  <tbody>
+    <tr><td class="name">payment.completed</td><td><span class="pill ok">Completed</span> <code>payment_complete()</code> — transaction hash logged</td></tr>
+    <tr><td class="name">payment.failed</td><td><span class="pill bad">Failed</span> order marked failed</td></tr>
+    <tr><td class="name">payment.cancelled</td><td><span class="pill na">Cancelled</span> order marked cancelled</td></tr>
+    <tr><td class="name">payment.refunded</td><td><span class="pill cy">Refund</span> WooCommerce refund created, hash stored</td></tr>
+    <tr><td class="name">dispute.created</td><td><span class="pill vi">Note</span> dispute note added to order</td></tr>
+    <tr><td class="name">dispute.resolved</td><td><span class="pill vi">Resolved</span> order updated per ruling</td></tr>
+  </tbody>
+</table>
+<div class="callout">
+  <div class="lbl">No listener yet?</div>
+  Orders remain pending, which is expected. The payment flow still works — you complete orders manually from WooCommerce → Orders until the listener is running.
+</div>
+
+<!-- ================= 8. TEST ================= -->
+<h2 class="section"><span class="num">8</span>Test a payment</h2>
+
+<h3 class="sub">8.1 · Add a test product</h3>
+<div class="steps">
+  <div class="step"><strong>Products → Add New</strong>Name it "Test Item" and set a regular price of 1.00.</div>
+  <div class="step"><strong>Publish</strong>The product is now purchasable.</div>
+</div>
+
+<h3 class="sub">8.2 · Place a test order</h3>
+<div class="steps">
+  <div class="step"><strong>Add the test product to the cart</strong>Visit the shop page and add it.</div>
+  <div class="step"><strong>Go to checkout</strong>Confirm <strong>"Pay with Ootle"</strong> appears as a payment option — if it is missing, re-check that Enable Ootle Gateway is checked and saved.</div>
+  <div class="step"><strong>Select it and place the order</strong>The order should redirect to your Ootle payment URL.</div>
+  <div class="step"><strong>Check the order status</strong>Open WooCommerce → Orders and confirm the status is <strong>pending</strong> and the notes contain the payment URL.</div>
+</div>
+
+<h3 class="sub">8.3 · Troubleshoot connection failures</h3>
+<table class="trouble">
+  <thead><tr><th>Symptom</th><th>Likely cause</th><th>Fix</th></tr></thead>
+  <tbody>
+    <tr><td>cURL error 35: TLS connect error</td><td>Self-signed cert on a local daemon</td><td>Enable Test Mode in plugin settings</td></tr>
+    <tr><td>cURL error 7: connection refused</td><td>Daemon not running, or wrong host/port</td><td>Start the daemon; verify API Base URL and port</td></tr>
+    <tr><td>API error 401</td><td>API key wrong, mistyped, or revoked</td><td>Re-copy the key; check it was not revoked</td></tr>
+    <tr><td>API error 403: InsufficientPermissions</td><td>API key missing a required scope</td><td>Add the scope and mint a new key</td></tr>
+    <tr><td>Order stuck on pending</td><td>No webhook listener running</td><td>Set up the listener (§7) or complete orders manually</td></tr>
+  </tbody>
+</table>
+
+<!-- ================= 9. PRODUCTION ================= -->
+<h2 class="section"><span class="num">9</span>Going to production</h2>
+
+<h3 class="sub">9.1 · Pre-launch checklist</h3>
+<ul class="checklist">
+  <li><span class="chk-name">Switch the network</span> — restart the daemon with <code>--network mainnet</code>.</li>
+  <li><span class="chk-name">Turn off Test Mode</span> — uncheck it in plugin settings so SSL verification is enforced.</li>
+  <li><span class="chk-name">Update the API Base URL</span> — point at your production daemon endpoint.</li>
+  <li><span class="chk-name">Use HTTPS</span> — front the daemon with a reverse proxy and a valid certificate.</li>
+  <li><span class="chk-name">Rotate the API key</span> — mint a production key with production scopes; revoke the testnet key.</li>
+  <li><span class="chk-name">Set a key expiry</span> — long but finite, so a leaked key eventually dies.</li>
+  <li><span class="chk-name">Fund the account</span> — confirm the merchant account has mainnet TARI for fees.</li>
+  <li><span class="chk-name">Place one live order</span> — a small real purchase before announcing the gateway.</li>
+</ul>
+
+<h3 class="sub">9.2 · Security rules that are not optional</h3>
+<table>
+  <thead><tr><th>Rule</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td class="name">Never run an unauthenticated daemon with real funds</td><td>Anyone who can reach the port can drain the account</td></tr>
+    <tr><td class="name">Never commit the API key or webhook secret</td><td>Version control history is permanent</td></tr>
+    <tr><td class="name">Use the smallest scope set possible</td><td>A leaked read-only key cannot drain the account</td></tr>
+    <tr><td class="name">Set key expiry</td><td>Limits how long a leaked key is useful</td></tr>
+    <tr><td class="name">Revoke unused keys</td><td>Fewer live keys means less attack surface</td></tr>
+    <tr><td class="name">Firewall the daemon port</td><td>Only the WordPress server should reach port 5100</td></tr>
+  </tbody>
+</table>
+
+<!-- ================= 10. REFERENCE ================= -->
+<h2 class="section"><span class="num">10</span>Reference — settings at a glance</h2>
+
+<table>
+  <thead><tr><th>Plugin field</th><th>Testnet value</th><th>Production value</th></tr></thead>
+  <tbody>
+    <tr><td class="name">Enable Ootle Gateway</td><td><span class="pill ok">yes</span></td><td><span class="pill ok">yes</span></td></tr>
+    <tr><td class="name">Payment Method Title</td><td>Pay with Ootle</td><td>Pay with Ootle</td></tr>
+    <tr><td class="name">Description</td><td>Pay securely via the Tari Ootle network</td><td>Pay securely via the Tari Ootle network</td></tr>
+    <tr><td class="name">API Key</td><td><code>tw_...</code> (testnet key)</td><td><code>tw_...</code> (production key)</td></tr>
+    <tr><td class="name">API Secret</td><td>blank unless signing enabled</td><td>blank unless signing enabled</td></tr>
+    <tr><td class="name">Webhook Secret</td><td><code>openssl rand -hex 32</code> output</td><td>different random output</td></tr>
+    <tr><td class="name">API Base URL</td><td><code>http://127.0.0.1:5100</code></td><td><code>https://ootle.yourdomain.com</code></td></tr>
+    <tr><td class="name">Test Mode</td><td><span class="pill warn">yes</span> skips SSL verify</td><td><span class="pill ok">no</span> enforces SSL verify</td></tr>
+  </tbody>
+</table>
+
+<!-- ================= 11. HELP ================= -->
+<h2 class="section"><span class="num">11</span>Where to get help</h2>
+
+<table>
+  <thead><tr><th>Resource</th><th>URL</th></tr></thead>
+  <tbody>
+    <tr><td class="name">Ootle documentation</td><td><a href="https://ootle.tari.com">ootle.tari.com</a></td></tr>
+    <tr><td class="name">API key guide</td><td><a href="https://ootle.tari.com/guides/agent-api-keys/">ootle.tari.com/guides/agent-api-keys</a></td></tr>
+    <tr><td class="name">Wallet setup guide</td><td><a href="https://ootle.tari.com/guides/setup-a-wallet/">ootle.tari.com/guides/setup-a-wallet</a></td></tr>
+    <tr><td class="name">Transaction overview</td><td><a href="https://ootle.tari.com/guides/transaction-overview/">ootle.tari.com/guides/transaction-overview</a></td></tr>
+    <tr><td class="name">Source code &amp; issues</td><td><a href="https://github.com/tari-project/tari-ootle">github.com/tari-project/tari-ootle</a></td></tr>
+    <tr><td class="name">Releases (binaries)</td><td><a href="https://github.com/tari-project/tari-ootle/releases">github.com/tari-project/tari-ootle/releases</a></td></tr>
+    <tr><td class="name">Community forum</td><td><a href="https://community.tari.com">community.tari.com</a></td></tr>
+  </tbody>
+</table>
+
+<div class="callout good">
+  <div class="lbl">End of guide</div>
+  If a step fails, start from the symptom table in section 8.3 before escalating. Most first-time failures are a wrong port, an unchecked Test Mode box, or a missing API key scope — all three are fixable in under a minute.
+</div>
+
+<div class="footer">
+  <strong>Ootle Payment Gateway for WordPress — Complete Setup Guide</strong> · Tari Technology · October 2026
+</div>
+
+</div>
+</body>
+</html>
+
+<!-- Toast (copy feedback) -->
+<div class="toast" id="toast" role="alert" aria-live="polite">
+  <svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+  <span id="toast-message">Copied to clipboard</span>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- Toast ---------- */
+  var toast = document.getElementById('toast');
+  var toastMessage = document.getElementById('toast-message');
+  var toastTimer = null;
+
+  function showToast(message, ok) {
+    if (!toast) return;
+    if (toastMessage) toastMessage.textContent = message;
+    toast.className = 'toast show ' + (ok ? 'success' : 'error');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toast.className = 'toast'; }, 2200);
+  }
+
+  function rawCodeFrom(el) {
+    if (!el) return '';
+    // textContent strips highlight spans and decodes entities, so this works
+    // whether or not the block carries .token markup.
+    return el.textContent.replace(/^\n/, '').replace(/\s+$/, '');
+  }
+
+  function legacyCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '-1000px';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text)
+        .then(function () { return true; })
+        .catch(function () { return legacyCopy(text); });
+    }
+    return Promise.resolve(legacyCopy(text));
+  }
+
+  document.querySelectorAll('.copy-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var targetId = btn.getAttribute('data-code-target');
+      var codeEl = targetId ? document.getElementById(targetId) : null;
+      var text = rawCodeFrom(codeEl);
+
+      if (!text) { showToast('Nothing to copy', false); return; }
+
+      copyText(text).then(function (ok) {
+        if (!ok) { showToast('Copy failed — select the code and press Ctrl+C', false); return; }
+
+        btn.classList.add('copied');
+        var label = btn.querySelector('.copy-text');
+        if (label) label.textContent = 'Copied!';
+        showToast('Code copied to clipboard', true);
+
+        setTimeout(function () {
+          btn.classList.remove('copied');
+          if (label) label.textContent = 'Copy';
+        }, 2000);
+      });
+    });
+  });
+})();
+</script>
