@@ -652,13 +652,78 @@ curl -s -X POST http://127.0.0.1:5100/json_rpc -H <span class="s">"Content-Type:
     <tr><td class="name">Description</td><td>Pay securely via the Tari Ootle network</td><td>Shown under the title</td></tr>
     <tr><td class="name">API Key</td><td>The <code>tw_...</code> key from section 4</td><td>Paste exactly — no quotes, no extra spaces</td></tr>
     <tr><td class="name">API Secret</td><td>Leave blank unless signing is enabled</td><td>Only needed if you turn on HMAC request signing</td></tr>
-    <tr><td class="name">Webhook Secret</td><td>A random 32+ character string you generate</td><td>See 6.2 below</td></tr>
+    <tr><td class="name">Webhook Secret</td><td>A random 32+ character string you generate</td><td>See 6.3 below</td></tr>
     <tr><td class="name">API Base URL</td><td><code>http://your-daemon-host:5100</code></td><td>Your wallet daemon JSON-RPC endpoint</td></tr>
     <tr><td class="name">Test Mode</td><td>Check for testnet</td><td>Disables SSL verification for local/self-signed daemons</td></tr>
   </tbody>
 </table>
 
-<h3 class="sub">6.1 · Finding your API base URL</h3>
+<h3 class="sub">6.1 · Stealth (Confidential) Payments — the six fields</h3>
+<p>Checking <strong>Stealth (Confidential) Payments</strong> turns on private settlement: every order settles to a
+<b>one-time stealth address</b> with a <b>blinded amount</b> (Pedersen commitment) and an <b>encrypted on-chain
+memo</b>. Six fields control this. Fill them from your wallet daemon's JSON-RPC responses.</p>
+<table>
+  <thead><tr><th>Field</th><th>What to enter</th><th>Where to get it</th></tr></thead>
+  <tbody>
+    <tr><td class="name">Stealth (Confidential) Payments</td><td>Check the box</td><td><span class="pill bad">Required</span> to enable confidential settlement</td></tr>
+    <tr><td class="name">Merchant Account</td><td>Your account <code>component_…</code> address</td><td>From <code>accounts.create</code> or <code>accounts.list</code> — the <code>component_address</code> field</td></tr>
+    <tr><td class="name">Merchant Public Key</td><td>The account <code>owner_public_key</code></td><td>From <code>accounts.create</code> / <code>accounts.list</code> — used to derive stealth addresses</td></tr>
+    <tr><td class="name">Resource Address</td><td>The <code>resource_…</code> address of your token</td><td>From <code>accounts.associate_stealth_resource</code> — the confidential resource you accept</td></tr>
+    <tr><td class="name">Resource View Key</td><td>The resource <code>view_key</code></td><td>From <code>accounts.associate_stealth_resource</code> — lets the merchant decrypt received amounts</td></tr>
+    <tr><td class="name">Max Fee (µT)</td><td>Maximum fee per transaction, in micro-Tari</td><td>Your choice — e.g. <code>1000</code> (1,000,000 µT = 1 TARI). Set a ceiling so fees never surprise you</td></tr>
+  </tbody>
+</table>
+
+<h4 class="sub">Getting the values from the daemon</h4>
+<p>With your Admin token from section 3, run these against <code>http://127.0.0.1:5100/json_rpc</code>:</p>
+
+<div class="cmd">
+  <div class="cmd-title"><span class="lang">JSON-RPC</span> 1. List your accounts (gives Merchant Account + Merchant Public Key)</div>
+<pre><code>{
+  "jsonrpc": "2.0",
+  "method": "accounts.list",
+  "params": { "offset": 0, "limit": 10 },
+  "id": 1
+}</code></pre>
+</div>
+<p>Copy <code>component_address</code> → <strong>Merchant Account</strong>, and <code>owner_public_key</code> → <strong>Merchant Public Key</strong>.</p>
+
+<div class="cmd">
+  <div class="cmd-title"><span class="lang">JSON-RPC</span> 2. Associate the stealth resource (gives Resource Address + View Key)</div>
+<pre><code>{
+  "jsonrpc": "2.0",
+  "method": "accounts.associate_stealth_resource",
+  "params": {
+    "account": { "ComponentAddress": "component_…" },
+    "resource_address": "resource_…"
+  },
+  "id": 2
+}</code></pre>
+</div>
+<p>The response returns the resource <code>address</code> and <code>view_key</code>. Paste them into
+<strong>Resource Address</strong> and <strong>Resource View Key</strong>.</p>
+
+<div class="cmd">
+  <div class="cmd-title"><span class="lang">JSON-RPC</span> 3. Confirm your account is funded (fees)</div>
+<pre><code>{
+  "jsonrpc": "2.0",
+  "method": "accounts.get_balances",
+  "params": { "account": { "ComponentAddress": "component_…" } },
+  "id": 3
+}</code></pre>
+</div>
+<p>Ensure the account holds enough TARI to cover the <strong>Max Fee</strong> you set, plus settlement. On testnet,
+claim from the faucet with <code>accounts.create_free_test_coins</code>.</p>
+
+<div class="note">
+  <strong>How a stealth checkout works:</strong> when a customer pays, the daemon derives a fresh one-time stealth
+  address from your <em>Merchant Public Key</em>, blinds the amount into a Pedersen commitment, encrypts the order
+  reference into the memo, then submits via <code>accounts.stealth_transfer</code>. Only you (holding the view key)
+  can decrypt the amount and memo — observers cannot link orders or read prices. The merchant account args are
+  <b>tagged enums</b>: use <code>{"ComponentAddress":"component_…"}</code>, never a bare string.
+</div>
+
+<h3 class="sub">6.2 · Finding your API base URL</h3>
 <table>
   <thead><tr><th>Daemon location</th><th>API Base URL value</th></tr></thead>
   <tbody>
@@ -672,7 +737,7 @@ curl -s -X POST http://127.0.0.1:5100/json_rpc -H <span class="s">"Content-Type:
   In production, always front the daemon with a reverse proxy (nginx or Caddy) and a valid certificate, so the API key is never sent over plain HTTP. Test Mode disables SSL verification — it must be <strong>off</strong> in production.
 </div>
 
-<h3 class="sub">6.2 · Generate a webhook secret</h3>
+<h3 class="sub">6.3 · Generate a webhook secret</h3>
 <p>Run this in your terminal and paste the output into the Webhook Secret field. This secret signs outgoing webhook payloads so the plugin can prove they came from a trusted source. It is never sent to the wallet daemon.</p>
 <div class="cmd-wrap">
   <div class="cmd-header">
