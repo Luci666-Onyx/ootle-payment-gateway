@@ -78,8 +78,17 @@ function ootle_thankyou_payment_instructions( $order_id ) {
       </div>
 
       <?php if ( $is_completed && $has_downloads ) : ?>
-        <div style="margin:0 0 16px;padding:12px 14px;border-radius:8px;background:#0c2d48;color:#79c0ff;border:1px solid #58a6ff;font-size:13px;">
-          Your download<?php echo count($downloads) > 1 ? 's are' : ' is'; ?> ready — see the <strong>Downloads</strong> table below.
+        <div style="margin:0 0 16px;padding:14px;border-radius:8px;background:#0d2818;color:#7ee787;border:1px solid #3fb950;">
+          <div style="font-weight:700;font-size:14px;margin-bottom:10px;">✅ Payment received — your download is ready</div>
+          <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px;">
+            <?php foreach ( $downloads as $dl ) : ?>
+              <li style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;background:#052e16;border:1px solid #14532d;border-radius:6px;">
+                <span style="color:#e6edf3;font-size:13px;"><?php echo esc_html( $dl['product_name'] ); ?></span>
+                <a href="<?php echo esc_url( $dl['download_url'] ); ?>" class="button"
+                   style="background:#3fb950;color:#052e16;border:none;border-radius:6px;padding:7px 14px;font-weight:700;font-size:13px;text-decoration:none;white-space:nowrap;">Download</a>
+              </li>
+            <?php endforeach; ?>
+          </ul>
         </div>
       <?php endif; ?>
 
