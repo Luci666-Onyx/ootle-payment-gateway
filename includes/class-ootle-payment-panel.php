@@ -311,39 +311,82 @@ function ootle_payment_complete_shortcode() {
     }
 
     $downloads = $order->get_downloadable_items();
+    // Order facts for the summary.
+    $order_number = $order->get_order_number();
+    $order_date   = wc_format_datetime( $order->get_date_created() );
+    $paid_xtr     = $order->get_meta( '_ootle_expected_xtr' );
+    $item_count   = $order->get_item_count();
     ob_start();
     ?>
-    <div class="ootle-pc" style="max-width:640px;margin:24px auto;padding:28px;border:1px solid #3fb950;border-radius:14px;background:#0d2818;">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-        <span style="font-size:28px;">✅</span>
-        <h2 style="margin:0;color:#7ee787;font-size:22px;">Payment received — thank you!</h2>
-      </div>
-      <p style="color:#a7f3d0;margin:0 0 18px;font-size:14px;">
-        Your Tari Ootle (XTR) payment for order <strong style="color:#fff;">#<?php echo esc_html( $order->get_order_number() ); ?></strong>
-        has been confirmed on-chain.
-      </p>
+    <div class="ootle-pc" style="max-width:680px;margin:8px auto 40px;font-family:inherit;">
+      <style>
+        @keyframes ootlePop { 0%{transform:scale(.6);opacity:0} 60%{transform:scale(1.08)} 100%{transform:scale(1);opacity:1} }
+        .ootle-pc-check{animation:ootlePop .5s cubic-bezier(.2,.8,.3,1.2) both;}
+      </style>
 
-      <?php if ( ! empty( $downloads ) ) : ?>
-        <h3 style="color:#7ee787;font-size:15px;margin:0 0 10px;">Your download<?php echo count( $downloads ) > 1 ? 's' : ''; ?></h3>
-        <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:10px;">
-          <?php foreach ( $downloads as $download ) :
-            $rem = $download['downloads_remaining'];
-            $rem_label = ( '' === $rem || null === $rem ) ? 'Unlimited downloads' : sprintf( '%s download%s remaining', $rem, $rem == 1 ? '' : 's' );
-            ?>
-            <li class="ootle-dl-item" data-remaining="<?php echo esc_attr( (string) $rem ); ?>"
-                style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;background:#052e16;border:1px solid #14532d;border-radius:8px;">
-              <span style="color:#e6edf3;font-size:14px;">
-                <?php echo esc_html( $download['product_name'] ); ?>
-                <span class="ootle-dl-remaining" style="display:block;color:#86efac;font-size:12px;margin-top:2px;"><?php echo esc_html( $rem_label ); ?></span>
-              </span>
-              <a href="<?php echo esc_url( $download['download_url'] ); ?>" class="button ootle-dl-btn"
-                 style="background:#3fb950;color:#052e16;border:none;border-radius:6px;padding:8px 14px;font-weight:700;font-size:13px;text-decoration:none;white-space:nowrap;">Download</a>
-            </li>
-          <?php endforeach; ?>
-        </ul>
-      <?php else : ?>
-        <p style="color:#a7f3d0;font-size:14px;">You can review your order anytime in <strong>My Account → Orders</strong>.</p>
-      <?php endif; ?>
+      <!-- Hero -->
+      <div style="text-align:center;padding:36px 24px 28px;border:1px solid #1f2a3f;border-radius:16px 16px 0 0;background:linear-gradient(180deg,#0d2818 0%,#0a1a10 100%);">
+        <div class="ootle-pc-check" style="width:72px;height:72px;margin:0 auto 18px;border-radius:50%;background:#0d2818;border:2px solid #3fb950;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 8px rgba(63,185,80,0.08);">
+          <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#3fb950" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </div>
+        <h2 style="margin:0 0 8px;color:#f0f6fc;font-size:26px;font-weight:800;letter-spacing:-0.01em;">Payment received — thank you!</h2>
+        <p style="margin:0;color:#8b949e;font-size:14px;">Your Tari Ootle (XTR) payment has been confirmed on-chain.</p>
+      </div>
+
+      <!-- Order summary -->
+      <div style="border:1px solid #1f2a3f;border-top:none;background:#111827;padding:20px 24px;">
+        <div style="display:flex;flex-wrap:wrap;gap:16px 32px;">
+          <div>
+            <div style="color:#6b7280;font-size:11px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Order</div>
+            <div style="color:#e6edf3;font-size:15px;font-weight:600;">#<?php echo esc_html( $order_number ); ?></div>
+          </div>
+          <div>
+            <div style="color:#6b7280;font-size:11px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Date</div>
+            <div style="color:#e6edf3;font-size:15px;font-weight:600;"><?php echo esc_html( $order_date ); ?></div>
+          </div>
+          <?php if ( $paid_xtr ) : ?>
+          <div>
+            <div style="color:#6b7280;font-size:11px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Paid</div>
+            <div style="color:#7ee787;font-size:15px;font-weight:700;"><?php echo esc_html( $paid_xtr ); ?> XTR</div>
+          </div>
+          <?php endif; ?>
+          <div>
+            <div style="color:#6b7280;font-size:11px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">Items</div>
+            <div style="color:#e6edf3;font-size:15px;font-weight:600;"><?php echo esc_html( $item_count ); ?></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Downloads -->
+      <div style="border:1px solid #1f2a3f;border-top:none;border-radius:0 0 16px 16px;background:#0d1117;padding:22px 24px;">
+        <?php if ( ! empty( $downloads ) ) : ?>
+          <h3 style="color:#f0f6fc;font-size:15px;margin:0 0 4px;">Your download<?php echo count( $downloads ) > 1 ? 's' : ''; ?></h3>
+          <p style="color:#6b7280;font-size:12px;margin:0 0 16px;">Click below to save your file<?php echo count( $downloads ) > 1 ? 's' : ''; ?>.</p>
+          <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:12px;">
+            <?php foreach ( $downloads as $download ) :
+              $rem = $download['downloads_remaining'];
+              $rem_label = ( '' === $rem || null === $rem ) ? 'Unlimited downloads' : sprintf( '%s download%s remaining', $rem, $rem == 1 ? '' : 's' );
+              ?>
+              <li class="ootle-dl-item" data-remaining="<?php echo esc_attr( (string) $rem ); ?>"
+                  style="display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px 16px;background:#161b22;border:1px solid #21262d;border-radius:10px;">
+                <span style="color:#e6edf3;font-size:14px;font-weight:600;">
+                  <?php echo esc_html( $download['product_name'] ); ?>
+                  <span class="ootle-dl-remaining" style="display:block;color:#3fb950;font-size:12px;font-weight:500;margin-top:3px;"><?php echo esc_html( $rem_label ); ?></span>
+                </span>
+                <a href="<?php echo esc_url( $download['download_url'] ); ?>" class="button ootle-dl-btn"
+                   style="background:#3fb950;color:#052e16;border:none;border-radius:8px;padding:10px 18px;font-weight:700;font-size:13px;text-decoration:none;white-space:nowrap;transition:filter .15s;"
+                   onmouseover="this.style.filter='brightness(1.1)'" onmouseout="this.style.filter=''">Download</a>
+              </li>
+            <?php endforeach; ?>
+          </ul>
+        <?php else : ?>
+          <p style="color:#c9d1d9;font-size:14px;margin:0;">You can review your order anytime in <a href="<?php echo esc_url( wc_get_page_permalink( 'myaccount' ) ); ?>" style="color:#9a67ea;">My Account → Orders</a>.</p>
+        <?php endif; ?>
+
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid #21262d;text-align:center;">
+          <a href="<?php echo esc_url( wc_get_page_permalink( 'shop' ) ); ?>" style="color:#8b949e;font-size:13px;text-decoration:none;" onmouseover="this.style.color='#9a67ea'" onmouseout="this.style.color='#8b949e'">← Continue shopping</a>
+        </div>
+      </div>
     </div>
     <script>
     (function () {
