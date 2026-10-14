@@ -1,5 +1,6 @@
-# Build artifacts
+# Build artifacts — but the release zip is tracked so users can download it
 *.zip
+!ootle-payment-gateway.zip
 
 # WordPress / editor cruft
 .DS_Store

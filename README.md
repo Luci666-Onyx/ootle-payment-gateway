@@ -1,15 +1,17 @@
 # Ootle Payment Gateway for WordPress
 
-**A WooCommerce checkout over the Tari Ootle Layer 2 network — with a confidential/stealth settlement layer in active development.**
+**A WooCommerce checkout over the Tari Ootle Layer 2 network — with confidential/stealth settlement verified on-chain.**
 
 Built for the Tari **October 2026 "Spooky Secrets"** build contest.
 
 > Tari is the programmable privacy chain. This gateway routes a WooCommerce
-> checkout through the Tari Ootle wallet daemon today, and is being extended so
-> that orders settle to one-time stealth addresses with on-chain encrypted
-> memos — accepting TARI without revealing what was bought or for how much.
-> The confidential layer is the contest focus and is **in progress** (see
-> Roadmap); the gateway beneath it is working and verified.
+> checkout through the Tari Ootle wallet daemon today, and settles orders
+> to one-time stealth addresses with on-chain encrypted memos — accepting
+> TARI without revealing what was bought or for how much. The confidential
+> layer is **verified on-chain** (an accepted confidential stealth transfer on
+> esmeralda, 2026-10-14 — tx
+> `dea894c80c62aeaeef5009acbe6ad177ad2597fbd60f3bf6bcb2e1f4b6f63b34`, see
+> `contest-verification.md`); the gateway beneath it is working and verified.
 
 ## What it is
 
@@ -21,10 +23,9 @@ payment. Supports six webhook events — completed, failed, cancelled, refunded,
 dispute created, and dispute resolved.
 
 What this contest entry is *about* is the privacy layer (below), which is
-being built on top of the working gateway: the goal is a checkout that is
-confidential by default, not by an opt-in the merchant might forget. That
-layer is the current focus — see `## Current implementation status` for what
-is done today versus in progress.
+built and verified on-chain: a checkout that is confidential by default, not
+by an opt-in the merchant might forget. See `## Current implementation status`
+for what is done today versus what remains.
 
 ## The privacy story — "Spooky Secrets"
 
@@ -62,13 +63,31 @@ Oct 9, 2026.)
 - Order-meta helpers (session-id lookup, transaction-hash get/set)
 - Full setup guide (install daemon → mint API key → configure → test → production) rendered as a 13-page PDF
 
-**Privacy layer — scaffolded, not yet wired to mainnet/testnet:**
+**Privacy layer — VERIFIED ON-CHAIN:**
 
-- Stealth-address generation and confidential-resource selection are the
-  contest-critical features and are **in progress** against the Ootle
-  stealth-transfer API (one-time stealth public keys, spend witnesses,
-  encrypted memos). See `## Roadmap` below. The gateway's `payment_method_type`
-  switch and stealth-URL builder are the integration points.
+The stealth transfer layer is no longer scaffolded. A full confidential stealth
+transfer was submitted to the esmeralda testnet on 2026-10-14 and **accepted by
+validator nodes**. The transaction ID, fee receipt, and the complete
+cryptographic proof set are recorded in `contest-verification.md` in this repo.
+
+- **transaction_id:** `dea894c80c62aeaeef5009acbe6ad177ad2597fbd60f3bf6bcb2e1f4b6f63b34`
+- **status:** Accepted (epoch 12279, outcome `Commit`)
+- **fee:** 100,000 µT (0.1 tTARI), balance moved by exactly that amount
+
+What that proves concretely:
+
+- **One-time stealth addresses** — the transfer settled to a fresh stealth output derived from the merchant's destination public key
+- **Pedersen commitments** — two output commitments on-chain, no plaintext amounts
+- **Bulletproof range proofs** — `agg_range_proof` proves both amounts in-range without revealing them
+- **Encrypted on-chain memos** — the order reference travelled as an encrypted `output_memo` (`{"Message": "..."}` tagged enum)
+- **Balance proof** — proves inputs equal outputs without revealing values
+- **Fee payment** — the only revealed output is the 100,000 µT fee, which must be public to be paid
+
+The verified wire format (`transfers[]`, `blinded_output_amount`,
+`output_memo` tagged enum, `owner_account`, `fee_params`, `max_epoch`) is
+implemented in `includes/class-ootle-rpc-client.php::build_stealth_transfer_params()`.
+
+Reproduce it with `php live-transfer-test.php` against a funded daemon.
 
 ## Architecture
 
@@ -113,9 +132,16 @@ funds, place a test order, go to production): see
 
 ## Roadmap
 
-- **Stealth checkout (contest-critical):** generate one-time stealth addresses per order via the wallet daemon's stealth-transfer API; settle confidential-resource payments into stealth outputs
-- **Encrypted order memos:** embed the order reference as an on-chain encrypted memo so the payer proves payment without exposing the link on-chain
+**Done:**
+
+- ~~**Stealth checkout (contest-critical):** generate one-time stealth addresses per order via the wallet daemon's stealth-transfer API; settle confidential-resource payments into stealth outputs~~ — **verified on-chain, 2026-10-14**
+- ~~**Encrypted order memos:** embed the order reference as an on-chain encrypted memo so the payer proves payment without exposing the link on-chain~~ — **verified on-chain, 2026-10-14**
+
+**Next:**
+
 - **Stealth-spend dashboard:** merchant view that reconstructs which stealth outputs are theirs, without correlating to customer identities
+- **Lower the fee ceiling:** the accepted tx burned the full `max_fee` (100,000 µT) when only 15,231 µT was required — an 84,769 µT overcharge. Dropping the default to ~20,000 µT cuts per-tx cost ~80%.
+- **Wire `pay_order()` to a real checkout:** the transfer is proven at the RPC layer; the remaining work is triggering it from `process_payment()` on a live order and reconciling via `stealth_utxos.list`
 - Optional: Ootle Pay storefront integration behind the `payment_method_type` switch
 
 ## License

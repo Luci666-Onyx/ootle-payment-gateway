@@ -50,6 +50,34 @@ class Ootle_Rpc_Client
     }
 
     /**
+     * Convert a bare account string to the tagged enum the daemon expects.
+     * The daemon rejects bare strings with "unknown variant ... expected
+     * `ComponentAddress` or `Name`".
+     *
+     * @param string $account Component address or account name.
+     * @return array Tagged enum: {"ComponentAddress": "..."} or {"Name": "..."}.
+     */
+    public static function to_account_arg(string $account): array
+    {
+        if (str_starts_with($account, 'component_')) {
+            return ['ComponentAddress' => $account];
+        }
+        return ['Name' => $account];
+    }
+
+    /**
+     * Get wallet daemon info (network, version, epoch).
+     * Public endpoint — no bearer token required.
+     *
+     * @return array Decoded JSON-RPC result.
+     * @throws Exception On transport or RPC error.
+     */
+    public function wallet_get_info(): array
+    {
+        return $this->call('wallet.get_info', []);
+    }
+
+    /**
      * Perform a stealth transfer: send a confidential-resource payment to a
      * one-time stealth address derived from the destination public key.
      *
@@ -94,7 +122,7 @@ class Ootle_Rpc_Client
     public function accounts_associate_stealth_resource(string $account, string $resource_address, string $view_key): array
     {
         return $this->call('accounts.associate_stealth_resource', [
-            'account' => $account,
+            'account' => self::to_account_arg($account),
             'resource_address' => $resource_address,
             'view_key' => $view_key,
         ]);
@@ -113,7 +141,9 @@ class Ootle_Rpc_Client
      */
     public function stealth_utxos_list(string $account, ?string $resource = null, int $limit = 50): array
     {
-        $params = ['account' => $account, 'limit' => $limit];
+        // Account args are tagged enums, not bare strings.
+        $account_arg = self::to_account_arg($account);
+        $params = ['account' => $account_arg, 'limit' => $limit];
         if ($resource !== null) {
             $params['resource_address'] = $resource;
         }
@@ -135,7 +165,7 @@ class Ootle_Rpc_Client
     public function stealth_utxos_decrypt_value(string $account, string $utxo_id, string $view_key): array
     {
         return $this->call('stealth_utxos.decrypt_value', [
-            'account' => $account,
+            'account' => self::to_account_arg($account),
             'utxo_id' => $utxo_id,
             'view_key' => $view_key,
         ]);
@@ -166,32 +196,46 @@ class Ootle_Rpc_Client
     {
         $micro = self::to_micro_units($args['amount']);
 
-        // blinded_amount is the confidential (Pedersen-committed) portion;
-        // revealed_amount is the public portion. A fully private payment puts
-        // everything in blinded_amount and zero in revealed_amount.
+        // blinded_output_amount is the confidential (Pedersen-committed) portion;
+        // revealed_output_amount is the public portion. A fully private payment puts
+        // everything in blinded_output_amount and zero in revealed_output_amount.
         $revealed = !empty($args['reveal_amount']) ? $micro : 0;
         $blinded = !empty($args['reveal_amount']) ? 0 : $micro;
 
-        $output = [
-            'destination' => $args['destination'],
-            'blinded_amount' => $blinded,
-            'revealed_amount' => $revealed,
+        // The wire field is transfers[], not outputs[]. The destination is an
+        // otl_esm_... address. output_memo is a TAGGED ENUM: {"Message": "..."}.
+        $transfer = [
+            'destination_address' => $args['destination'],
+            'blinded_output_amount' => $blinded,
+            'revealed_output_amount' => $revealed,
+            'pay_to' => 'StealthPublicKey',
+            'attach_sender_address' => false,
+            'pay_ref' => null,
         ];
         if (!empty($args['memo'])) {
-            $output['memo'] = $args['memo'];
+            $transfer['output_memo'] = ['Message' => $args['memo']];
         }
 
         $params = [
-            'account' => $args['account'],
+            'account' => self::to_account_arg($args['account']),
+            'owner_account' => self::to_account_arg($args['account']),
             'resource_address' => $args['resource_address'],
-            'outputs' => [$output],
-            'max_fee' => (int) ($args['max_fee'] ?? 1000),
+            'input_selection' => 'PreferRevealed',
+            'transfers' => [$transfer],
+            'badge_usage' => 'None',
+            'max_fee' => (int) ($args['max_fee'] ?? 100000),
             'max_epoch' => (int) ($args['max_epoch'] ?? 0),
+            'dry_run' => false,
+            'fee_params' => [
+                'input_selection' => 'PreferRevealed',
+                'pay_fee_with_swap' => null,
+            ],
         ];
 
-        // A zero max_epoch means "no explicit cap"; the daemon picks the window.
+        // max_epoch is mandatory — every tx carries a bounded validity window.
+        // If the caller passed 0, default to current epoch + ~100 blocks.
         if ($params['max_epoch'] === 0) {
-            unset($params['max_epoch']);
+            $params['max_epoch'] = (int) ($args['current_epoch'] ?? 0) + 100;
         }
 
         return $params;

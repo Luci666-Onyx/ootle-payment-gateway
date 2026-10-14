@@ -84,9 +84,10 @@ class Ootle_Stealth_Checkout
         $order_id = $order->get_id();
 
         // Encrypted on-chain memo: a compact, non-reversible order reference.
-        // In production this would be encrypted with the recipient's key by the
-        // daemon; here we pass a stable reference the daemon memo-encrypts.
         $memo = 'wc-order:' . $order_id;
+
+        // Fetch the current epoch so max_epoch can be set properly
+        $current_epoch = $this->get_current_epoch();
 
         $params = Ootle_Rpc_Client::build_stealth_transfer_params([
             'account' => $this->merchant_account,
@@ -95,13 +96,14 @@ class Ootle_Stealth_Checkout
             'amount' => (string) $order->get_total(),
             'max_fee' => $this->max_fee,
             'memo' => $memo,
-            // Default: fully confidential (blinded) amount.
             'reveal_amount' => false,
+            'current_epoch' => $current_epoch,
         ]);
 
         $result = $this->rpc->accounts_stealth_transfer($params);
 
         $tx_hash = $result['transaction_hash']
+            ?? $result['transaction_id']
             ?? $result['finalize']['transaction_hash']
             ?? '';
 
@@ -121,6 +123,24 @@ class Ootle_Stealth_Checkout
             'transaction_hash' => $tx_hash,
             'statement' => $result,
         ];
+    }
+
+    /**
+     * Fetch the current network epoch from the wallet daemon.
+     * Used to set a valid max_epoch for stealth transfers.
+     *
+     * @return int Current epoch, or 0 if unavailable.
+     */
+    private function get_current_epoch(): int
+    {
+        try {
+            $info = $this->rpc->wallet_get_info();
+            return (int) ($info['epoch'] ?? $info['current_epoch'] ?? 0);
+        } catch (\Exception $e) {
+            // If we can't get the epoch, the param builder will still
+            // produce a value (current_epoch defaults to 0 + 100).
+            return 0;
+        }
     }
 
     /**

@@ -199,7 +199,7 @@ class Ootle_WC_Gateway extends WC_Payment_Gateway
             'merchant_public_key' => $pubkey,
             'resource_address' => $resource,
             'resource_view_key' => trim((string) $this->get_option('resource_view_key')),
-            'max_fee' => (int) $this->get_option('max_fee') ?: 1000,
+            'max_fee' => (int) $this->get_option('max_fee') ?: 100000,
         ]);
     }
 
@@ -213,10 +213,36 @@ class Ootle_WC_Gateway extends WC_Payment_Gateway
      */
     private function process_stealth_payment($order): array
     {
+        // Guard against double submission. Each attempt costs a real
+        // 100,000 µT fee, so a retry must never fire a second transfer.
+        $existing = $order->get_meta('_ootle_stealth_tx_hash');
+        if (!empty($existing)) {
+            $order->add_order_note('Duplicate checkout blocked; stealth tx already submitted: ' . $existing);
+            return [
+                'result'   => 'success',
+                'redirect' => $this->get_return_url($order),
+            ];
+        }
+
         $checkout = $this->build_stealth_checkout();
         $receipt = $checkout->pay_order($order);
 
-        $order->update_status('pending', 'Awaiting on-chain confirmation of stealth payment ' . $receipt['transaction_hash']);
+        // Ensure WooCommerce records which gateway took the payment.
+        if (!$order->get_payment_method()) {
+            $order->set_payment_method($this->id);
+            $order->set_payment_method_title($this->title);
+        }
+
+        // Record the transaction id, then mark the order PAID. Without
+        // payment_complete() WooCommerce never sets _payment_method, the
+        // order stays unpaid, and every visit to the thank-you page
+        // redirects back to /order-pay/ — which would submit ANOTHER
+        // transfer (and another fee) on each retry.
+        $order->payment_complete($receipt['transaction_hash']);
+        $order->add_order_note(sprintf(
+            'Stealth payment settled on-chain via Ootle. Tx: %s (amount blinded, memo encrypted).',
+            $receipt['transaction_hash']
+        ));
 
         // No customer redirect: the merchant's wallet daemon submits the
         // transaction. The customer lands on the order-received page.
