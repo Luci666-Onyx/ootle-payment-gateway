@@ -37,6 +37,9 @@ class Ootle_Rpc_Client
     /** @var int Monotonic JSON-RPC request id. */
     private int $rpc_id = 0;
 
+    /** @var string|null Cached session token from auth.request. */
+    private ?string $session_token = null;
+
     /**
      * @param string $base_url Daemon base URL (no trailing slash).
      * @param string $api_key  Bearer API key.
@@ -172,6 +175,27 @@ class Ootle_Rpc_Client
     }
 
     /**
+     * Get the current balances for an account. Returns confidential and
+     * revealed balances per resource. This is the merchant-side reconciliation
+     * call: by comparing the confidential balance before and after a customer
+     * pays, the store detects the incoming payment without needing to correlate
+     * individual stealth outputs (which is the whole point of confidential
+     * transfers — on-chain amounts are hidden).
+     *
+     * @param string $account Account name or component address.
+     * @return array Decoded JSON-RPC `result`: { address, balances: [ { balance,
+     *               confidential_balance, divisibility, resource_address,
+     *               resource_type, token_symbol, vault_address }, ... ] }
+     * @throws Exception On transport or RPC error.
+     */
+    public function accounts_get_balances(string $account): array
+    {
+        return $this->call('accounts.get_balances', [
+            'account' => $account,
+        ]);
+    }
+
+    /**
      * Build the params array for accounts.stealth_transfer from the pieces a
      * WooCommerce order provides. Kept separate from the transport so the
      * gateway can assemble (and unit-test) the payload without a live daemon.
@@ -196,47 +220,58 @@ class Ootle_Rpc_Client
     {
         $micro = self::to_micro_units($args['amount']);
 
-        // blinded_output_amount is the confidential (Pedersen-committed) portion;
-        // revealed_output_amount is the public portion. A fully private payment puts
-        // everything in blinded_output_amount and zero in revealed_output_amount.
+        // Fully confidential by default: the whole amount is blinded
+        // (Pedersen-committed); revealed_amount stays zero.
         $revealed = !empty($args['reveal_amount']) ? $micro : 0;
-        $blinded = !empty($args['reveal_amount']) ? 0 : $micro;
+        $blinded  = !empty($args['reveal_amount']) ? 0 : $micro;
 
-        // The wire field is transfers[], not outputs[]. The destination is an
-        // otl_esm_... address. output_memo is a TAGGED ENUM: {"Message": "..."}.
+        // The daemon's accounts.stealth_transfer expects a `transfers` array
+        // (NOT `outputs`), each with a destination_address, the blinded/revealed
+        // split, and an output_memo that is a TAGGED ENUM ({"Message": "..."}),
+        // not a bare string. pay_to "StealthPublicKey" derives the one-time
+        // stealth address from the destination public key.
         $transfer = [
-            'destination_address' => $args['destination'],
-            'blinded_output_amount' => $blinded,
+            'destination_address'    => $args['destination'],
+            'blinded_output_amount'  => $blinded,
             'revealed_output_amount' => $revealed,
-            'pay_to' => 'StealthPublicKey',
-            'attach_sender_address' => false,
-            'pay_ref' => null,
+            'output_memo'            => !empty($args['memo']) ? ['Message' => (string) $args['memo']] : null,
+            'pay_to'                 => 'StealthPublicKey',
+            'attach_sender_address'  => false,
+            'pay_ref'                => null,
         ];
-        if (!empty($args['memo'])) {
-            $transfer['output_memo'] = ['Message' => $args['memo']];
+
+        // max_epoch is MANDATORY (every tx carries a bounded validity window).
+        // Default to a generous window when the caller does not set one.
+        $max_epoch = (int) ($args['max_epoch'] ?? 0);
+        if ($max_epoch <= 0) {
+            $max_epoch = 12120 + 1000; // current epoch headroom (esmeralda ~12120)
+        }
+
+        // The daemon's account args are TAGGED ENUMS, not bare strings:
+        // {"ComponentAddress":"component_..."} or {"Name":"..."}. A bare
+        // component_ string is rejected with "unknown variant".
+        $account = $args['account'];
+        if (str_starts_with($account, 'component_')) {
+            $account_arg = ['ComponentAddress' => $account];
+        } else {
+            $account_arg = ['Name' => $account];
         }
 
         $params = [
-            'account' => self::to_account_arg($args['account']),
-            'owner_account' => self::to_account_arg($args['account']),
+            'account'         => $account_arg,
+            'owner_account'   => $account_arg,
             'resource_address' => $args['resource_address'],
             'input_selection' => 'PreferRevealed',
-            'transfers' => [$transfer],
-            'badge_usage' => 'None',
-            'max_fee' => (int) ($args['max_fee'] ?? 100000),
-            'max_epoch' => (int) ($args['max_epoch'] ?? 0),
-            'dry_run' => false,
-            'fee_params' => [
-                'input_selection' => 'PreferRevealed',
+            'transfers'       => [$transfer],
+            'badge_usage'     => 'None',
+            'max_fee'         => (int) ($args['max_fee'] ?? 100000),
+            'max_epoch'       => $max_epoch,
+            'dry_run'         => false,
+            'fee_params'      => [
+                'input_selection'   => 'PreferRevealed',
                 'pay_fee_with_swap' => null,
             ],
         ];
-
-        // max_epoch is mandatory — every tx carries a bounded validity window.
-        // If the caller passed 0, default to current epoch + ~100 blocks.
-        if ($params['max_epoch'] === 0) {
-            $params['max_epoch'] = (int) ($args['current_epoch'] ?? 0) + 100;
-        }
 
         return $params;
     }
@@ -275,6 +310,10 @@ class Ootle_Rpc_Client
     {
         $url = $this->base_url . '/json_rpc';
 
+        // Obtain (and cache) a session token. A static api_key, if configured,
+        // is used as a fallback bearer; otherwise we mint one via auth.request.
+        $token = $this->get_session_token($url);
+
         $envelope = [
             'jsonrpc' => '2.0',
             'method' => $method,
@@ -286,7 +325,7 @@ class Ootle_Rpc_Client
             'method' => 'POST',
             'headers' => [
                 'Content-Type' => 'application/json',
-                'Authorization' => 'Bearer ' . $this->api_key,
+                'Authorization' => 'Bearer ' . $token,
             ],
             'timeout' => 30,
             'sslverify' => !$this->insecure,
@@ -321,5 +360,54 @@ class Ootle_Rpc_Client
         }
 
         return $decoded['result'] ?? [];
+    }
+
+    /**
+     * Return a bearer token for daemon calls. Uses the configured api_key if
+     * present; otherwise mints a session token via auth.request (no credentials,
+     * suitable for a local/dev daemon) and caches it on the instance.
+     *
+     * @param string $url Full /json_rpc endpoint.
+     * @return string
+     * @throws Exception If auth fails.
+     */
+    private function get_session_token(string $url): string
+    {
+        if ($this->api_key !== '') {
+            return $this->api_key;
+        }
+        if ($this->session_token !== null) {
+            return $this->session_token;
+        }
+
+        $envelope = [
+            'jsonrpc' => '2.0',
+            'method' => 'auth.request',
+            'params' => [
+                'permissions' => ['Admin'],
+                'credentials' => ['None' => null],
+            ],
+            'id' => ++$this->rpc_id,
+        ];
+        $args = [
+            'method' => 'POST',
+            'headers' => ['Content-Type' => 'application/json'],
+            'timeout' => 15,
+            'sslverify' => !$this->insecure,
+            'body' => wp_json_encode($envelope),
+        ];
+        $response = wp_remote_request($url, $args);
+        if (is_wp_error($response)) {
+            throw new Exception('Ootle auth failed: ' . $response->get_error_message());
+        }
+        $decoded = json_decode(wp_remote_retrieve_body($response), true);
+        if (!is_array($decoded) || !isset($decoded['result']['token'])) {
+            $msg = is_array($decoded) && isset($decoded['error']['message'])
+                ? $decoded['error']['message']
+                : 'no token in auth response';
+            throw new Exception('Ootle auth failed: ' . $msg);
+        }
+        $this->session_token = (string) $decoded['result']['token'];
+        return $this->session_token;
     }
 }

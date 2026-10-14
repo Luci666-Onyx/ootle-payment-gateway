@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Ootle Payment Gateway for WordPress
- * Description: WooCommerce payment gateway over the Tari Ootle Layer 2 network — TARI, NFT, and stablecoin checkout via the wallet-daemon JSON-RPC API, with a confidential/stealth settlement layer in active development. Built for the Tari October 2026 "Spooky Secrets" build contest.
+ * Description: WooCommerce payment gateway over the Tari Ootle Layer 2 network — TARI, NFT, and stablecoin checkout via the wallet-daemon JSON-RPC API, with a confidential/stealth settlement layer verified on the esmeralda testnet. Built for the Tari October 2026 "Spooky Secrets" build contest.
  * Version: 1.0.0
  * Author: Tari Technology
  * License: MIT
@@ -22,10 +22,21 @@ require_once __DIR__ . '/includes/class-ootle-order-meta.php';
 require_once __DIR__ . '/includes/class-ootle-webhook-handler.php';
 require_once __DIR__ . '/includes/class-ootle-rpc-client.php';
 require_once __DIR__ . '/includes/class-ootle-stealth-checkout.php';
+require_once __DIR__ . '/includes/class-ootle-reconciler.php';
+require_once __DIR__ . '/includes/class-ootle-price-converter.php';
+require_once __DIR__ . '/includes/class-ootle-payment-panel.php';
 
 add_action('plugins_loaded', 'register_ootle_gateway');
 add_action('wp_enqueue_scripts', 'ootle_gateway_enqueue_scripts');
 add_action('admin_enqueue_scripts', 'ootle_gateway_admin_enqueue_scripts');
+
+// Start the payment reconciler (detects incoming Ootle payments on-hold orders).
+add_action('plugins_loaded', ['Ootle_Payment_Reconciler', 'init']);
+
+// Clear the cron event on deactivation.
+register_deactivation_hook(__FILE__, function () {
+    wp_clear_scheduled_hook(Ootle_Payment_Reconciler::CRON_HOOK);
+});
 
 function register_ootle_gateway() {
     if (!class_exists('WC_Payment_Gateway')) {
