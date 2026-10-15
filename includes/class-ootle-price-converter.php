@@ -90,6 +90,25 @@ function ootle_checkout_tari_converter() {
         // XTR = Ootle L2 token. Rate is USD per 1 XTR.
         var XTR_USD = <?php echo json_encode( $rate ); ?>;
 
+        // Echo the displayed rate back with the checkout form so the gateway
+        // can reject a stale price (see Ootle_WC_Gateway::validate_rate_freshness).
+        // Injected here, in the footer, so it lands inside the checkout <form>.
+        function ensureRateField() {
+            var form = document.querySelector('form.checkout');
+            if (!form) return;
+            if (form.querySelector('input[name="ootle_xtr_usd_rate"]')) return;
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'ootle_xtr_usd_rate';
+            input.value = String(XTR_USD);
+            form.appendChild(input);
+        }
+        if (document.readyState !== 'loading') {
+            ensureRateField();
+        } else {
+            document.addEventListener('DOMContentLoaded', ensureRateField);
+        }
+
         function parseAmount(str) {
             // Only accept a clean single price like "$10.00" or "10.00".
             // Reject mixed text (e.g. "Test Product x 1") that would

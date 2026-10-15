@@ -265,6 +265,76 @@ class Ootle_WC_Gateway extends WC_Payment_Gateway
         return 0;
     }
 
+    /**
+     * Maximum exchange-rate drift tolerated between the rate the customer saw
+     * on the checkout page and the rate at the moment they submit. Beyond this
+     * the checkout is rejected so the customer re-confirms the new price
+     * instead of silently paying a stale amount.
+     *
+     * 2% covers normal XTM intraday noise while catching a genuinely stale page.
+     */
+    const RATE_DRIFT_MAX_PCT = 2.0;
+
+    /**
+     * Validate that the exchange rate the customer saw is still current.
+     *
+     * The checkout page renders a price from a cached rate (5 min TTL). If a
+     * customer leaves the tab open, that figure can go stale. We compare the
+     * rate echoed back from the form against a FRESH rate and reject when the
+     * drift exceeds RATE_DRIFT_MAX_PCT.
+     *
+     * @param WC_Order $order
+     * @throws Exception When the rate drifted too far, or a rate is unavailable.
+     */
+    private function validate_rate_freshness($order): void
+    {
+        // The rate the page displayed, echoed back by the checkout form.
+        $shown_rate = isset($_POST['ootle_xtr_usd_rate'])
+            ? (float) wp_unslash($_POST['ootle_xtr_usd_rate'])
+            : 0.0;
+
+        // Nothing to compare against (e.g. an API-driven checkout): skip.
+        if ($shown_rate <= 0) {
+            return;
+        }
+
+        // Force a fresh read: clear the cached transient first so we get the
+        // live market rate rather than the 5-minute-old cached value.
+        delete_transient('ootle_xtm_usd_rate');
+        $live_rate = function_exists('ootle_get_xtm_usd_rate')
+            ? (float) ootle_get_xtm_usd_rate()
+            : 0.0;
+
+        if ($live_rate <= 0) {
+            // Cannot verify freshness. Refuse rather than guess: paying the
+            // wrong amount is worse than asking the customer to retry.
+            throw new Exception(
+                'Could not fetch the current Tari exchange rate. Please try again in a moment.'
+            );
+        }
+
+        $drift_pct = abs($live_rate - $shown_rate) / $shown_rate * 100.0;
+
+        if ($drift_pct > self::RATE_DRIFT_MAX_PCT) {
+            $order->add_order_note(sprintf(
+                'Checkout rejected: exchange rate moved %.2f%% (shown %.6f, live %.6f USD/XTR) — exceeds the %.1f%% tolerance.',
+                $drift_pct,
+                $shown_rate,
+                $live_rate,
+                self::RATE_DRIFT_MAX_PCT
+            ));
+            throw new Exception(sprintf(
+                'The Tari exchange rate changed while this page was open (%.1f%%). Please reload the checkout page to see the updated price.',
+                $drift_pct
+            ));
+        }
+
+        // Record what we validated against, for the audit trail.
+        $order->update_meta_data('_ootle_rate_at_checkout', (string) $live_rate);
+        $order->update_meta_data('_ootle_rate_shown', (string) $shown_rate);
+        $order->update_meta_data('_ootle_rate_drift_pct', (string) round($drift_pct, 4));
+    }
+
     private function process_stealth_payment($order): array
     {
         // Guard against double submission: if this order already has a
@@ -278,6 +348,10 @@ class Ootle_WC_Gateway extends WC_Payment_Gateway
                 'redirect' => $this->get_return_url($order),
             ];
         }
+
+        // Reject a stale price before issuing a payment address. This is the
+        // window where a customer could otherwise pay an outdated amount.
+        $this->validate_rate_freshness($order);
 
         // Customer-payment model: the customer sends XTR from their own wallet
         // to the merchant's Ootle address. We do NOT move funds from the
